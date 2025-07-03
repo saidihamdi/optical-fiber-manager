@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Optical Fiber Manager | Professional Fiber Management</title>
+
+    <!-- Favicon -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔌</text></svg>"
+    />
+
+    <!-- External Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/animations.css" />
+  </head>
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen animate__animated animate__fadeIn">
+      <div class="loading-content">
+        <div class="fiber-animation">
+          <div class="fiber-strand"></div>
+          <div class="light-pulse"></div>
+        </div>
+        <h2 class="loading-title">Optical Fiber Manager</h2>
+        <div class="loading-bar">
+          <div class="loading-progress"></div>
+        </div>
+        <p class="loading-text">Initializing fiber management system...</p>
+      </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="app-container" style="display: none">
+      <!-- Navigation Header -->
+      <header class="nav-header">
+        <div class="nav-content">
+          <div class="nav-brand">
+            <i class="fas fa-network-wired brand-icon"></i>
+            <span class="brand-text">Optical Fiber Manager</span>
+          </div>
+
+          <nav class="nav-menu">
+            <button class="nav-item active" data-page="dashboard">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Dashboard</span>
+            </button>
+            <button class="nav-item" data-page="projects">
+              <i class="fas fa-folder-open"></i>
+              <span>Projects</span>
+            </button>
+            <button class="nav-item" data-page="create">
+              <i class="fas fa-plus-circle"></i>
+              <span>New Project</span>
+            </button>
+            <button class="nav-item" data-page="about">
+              <i class="fas fa-info-circle"></i>
+              <span>About</span>
+            </button>
+          </nav>
+
+          <div class="nav-actions">
+            <button class="btn-icon" id="theme-toggle" title="Toggle Theme">
+              <i class="fas fa-moon"></i>
+            </button>
+            <button class="btn-icon" id="notifications" title="Notifications">
+              <i class="fas fa-bell"></i>
+              <span class="notification-badge">3</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- Dashboard Page -->
+        <section id="dashboard-page" class="page-content active animate__animated">
+          <div class="dashboard-header">
+            <h1 class="page-title">
+              <i class="fas fa-chart-line title-icon"></i>
+              Dashboard Overview
+            </h1>
+            <p class="page-subtitle">Monitor your fiber optic projects in real-time</p>
+          </div>
+
+          <!-- Stats Cards -->
+          <div class="stats-grid">
+            <div class="stat-card projects-card animate__animated animate__fadeInUp">
+              <div class="stat-icon">
+                <i class="fas fa-project-diagram"></i>
+              </div>
+              <div class="stat-content">
+                <h3 class="stat-number" id="total-projects">0</h3>
+                <p class="stat-label">Total Projects</p>
+                <div class="stat-trend positive">
+                  <i class="fas fa-arrow-up"></i>
+                  <span>+12% this month</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stat-card fibers-card animate__animated animate__fadeInUp" style="animation-delay: 0.1s">
+              <div class="stat-icon">
+                <i class="fas fa-bezier-curve"></i>
+              </div>
+              <div class="stat-content">
+                <h3 class="stat-number" id="total-fibers">0</h3>
+                <p class="stat-label">Configured Fibers</p>
+                <div class="stat-trend positive">
+                  <i class="fas fa-arrow-up"></i>
+                  <span>+8% this week</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stat-card progress-card animate__animated animate__fadeInUp" style="animation-delay: 0.2s">
+              <div class="stat-icon">
+                <i class="fas fa-tasks"></i>
+              </div>
+              <div class="stat-content">
+                <h3 class="stat-number" id="avg-progress">0%</h3>
+                <p class="stat-label">Average Progress</p>
+                <div class="stat-trend neutral">
+                  <i class="fas fa-minus"></i>
+                  <span>Steady</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stat-card efficiency-card animate__animated animate__fadeInUp" style="animation-delay: 0.3s">
+              <div class="stat-icon">
+                <i class="fas fa-bolt"></i>
+              </div>
+              <div class="stat-content">
+                <h3 class="stat-number">98%</h3>
+                <p class="stat-label">System Efficiency</p>
+                <div class="stat-trend positive">
+                  <i class="fas fa-arrow-up"></i>
+                  <span>Optimal</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Projects -->
+          <div class="dashboard-section animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
+            <div class="section-header">
+              <h2 class="section-title">
+                <i class="fas fa-clock"></i>
+                Recent Projects
+              </h2>
+              <button class="btn-secondary" onclick="showPage('projects')">
+                View All <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+
+            <div class="recent-projects" id="recent-projects">
+              <!-- Projects will be loaded here -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Projects Page -->
+        <section id="projects-page" class="page-content">
+          <div class="page-header">
+            <h1 class="page-title">
+              <i class="fas fa-folder-open title-icon"></i>
+              Project Management
+            </h1>
+            <div class="page-actions">
+              <button class="btn-secondary" id="refresh-projects">
+                <i class="fas fa-sync-alt"></i>
+                Refresh
+              </button>
+              <button class="btn-primary" onclick="showPage('create')">
+                <i class="fas fa-plus"></i>
+                New Project
+              </button>
+            </div>
+          </div>
+
+          <!-- Projects Grid -->
+          <div class="projects-container" id="projects-container">
+            <!-- Projects will be loaded here -->
+          </div>
+        </section>
+
+        <!-- Create Project Page -->
+        <section id="create-page" class="page-content">
+          <div class="create-project-wizard" id="create-wizard">
+            <!-- Wizard content will be loaded here -->
+          </div>
+        </section>
+
+        <!-- About Page -->
+        <section id="about-page" class="page-content">
+          <div class="about-container animate__animated animate__fadeInUp">
+            <div class="about-header">
+              <div class="about-icon">
+                <i class="fas fa-network-wired"></i>
+              </div>
+              <h1>Optical Fiber Manager</h1>
+              <p class="about-version">Version 1.0.0</p>
+            </div>
+
+            <div class="about-content">
+              <div class="about-section">
+                <h2><i class="fas fa-info-circle"></i> About</h2>
+                <p>
+                  Professional optical fiber project management application designed for technicians working with
+                  complex fiber optic installations. Built with modern web technologies for optimal performance and user
+                  experience.
+                </p>
+              </div>
+
+              <div class="about-section">
+                <h2><i class="fas fa-cog"></i> Features</h2>
+                <ul class="feature-list">
+                  <li><i class="fas fa-check"></i> Excel file import and processing</li>
+                  <li><i class="fas fa-check"></i> Real-time fiber status management</li>
+                  <li><i class="fas fa-check"></i> Voice recognition support (French)</li>
+                  <li><i class="fas fa-check"></i> Automatic project backup</li>
+                  <li><i class="fas fa-check"></i> Beautiful, responsive interface</li>
+                </ul>
+              </div>
+
+              <div class="about-section">
+                <h2><i class="fas fa-tools"></i> Technology</h2>
+                <div class="tech-stack">
+                  <span class="tech-badge">Node.js</span>
+                  <span class="tech-badge">Express</span>
+                  <span class="tech-badge">Modern CSS</span>
+                  <span class="tech-badge">Web Speech API</span>
+                  <span class="tech-badge">Excel Processing</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Floating Action Button -->
+      <button class="fab" id="voice-fab" title="Voice Recognition">
+        <i class="fas fa-microphone"></i>
+      </button>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Modal Container -->
+    <div id="modal-container" class="modal-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/projects.js"></script>
+    <script src="js/voice.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

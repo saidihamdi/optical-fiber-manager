@@ -1,0 +1,23 @@
+{
+  "id": "d5ea345d-2631-47fb-b3a6-51691dbbb619",
+  "name": "PM401",
+  "reference": "PROJ-1751544302257",
+  "description": "PM401",
+  "createdAt": "2025-07-03T12:05:02.284Z",
+  "updatedAt": "2025-07-03T12:05:02.284Z",
+  "status": "draft",
+  "excelFile": null,
+  "data": {
+    "tiroirs": {},
+    "fibers": {},
+    "pbos": {},
+    "pbis": {}
+  },
+  "progress": {
+    "totalFibers": 0,
+    "configuredFibers": 0,
+    "currentTiroir": null,
+    "currentModule": null,
+    "currentPBO": null
+  }
+}
