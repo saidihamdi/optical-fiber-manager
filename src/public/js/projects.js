@@ -17,7 +17,20 @@ window.Projects = {
   init() {
     console.log("📁 Initializing projects module...");
     this.setupEventListeners();
+    this.setupHeaderButtons();
     console.log("✅ Projects module initialized");
+  },
+
+  setupHeaderButtons() {
+    // Fix the "New Project" button in the header
+    document.addEventListener("click", (e) => {
+      // Check if it's a navigation button
+      if (e.target.matches('button[onclick*="showPage"]') || e.target.closest('button[onclick*="showPage"]')) {
+        e.preventDefault();
+        console.log("🔗 Header: Creating new project");
+        window.Navigation.showPage("create");
+      }
+    });
   },
 
   setupEventListeners() {
@@ -199,90 +212,79 @@ window.Projects = {
     const statusColor = window.Utils.getProjectStatusColor(project.status);
 
     return `
-          <div class="project-card hover-lift" 
-               style="animation-delay: ${index * 0.1}s;" 
-               data-project-id="${project.id}">
-              
-              <div class="project-header">
-                  <div class="project-info">
-                      <h3>${project.name}</h3>
-                      <span class="project-reference">${project.reference}</span>
-                  </div>
-                  <span class="project-status ${project.status}" style="background-color: ${statusColor};">
-                      ${this.getStatusLabel(project.status)}
-                  </span>
-              </div>
-              
-              <div class="project-progress">
-                  <div class="progress-header">
-                      <span class="progress-label">Configuration Progress</span>
-                      <span class="progress-percentage">${progress}%</span>
-                  </div>
-                  <div class="progress-bar">
-                      <div class="progress-fill" style="width: ${progress}%"></div>
-                  </div>
-              </div>
-              
-              <div class="project-stats">
-                  <div class="project-stat">
-                      <span class="project-stat-number">${project.totalFibers || 0}</span>
-                      <span class="project-stat-label">Total Fibers</span>
-                  </div>
-                  <div class="project-stat">
-                      <span class="project-stat-number">${project.configuredFibers || 0}</span>
-                      <span class="project-stat-label">Configured</span>
-                  </div>
-                  <div class="project-stat">
-                      <span class="project-stat-number">${project.pbos || 0}</span>
-                      <span class="project-stat-label">PBO(s)</span>
-                  </div>
-                  <div class="project-stat">
-                      <span class="project-stat-number">${project.pbis || 0}</span>
-                      <span class="project-stat-label">PBI(s)</span>
-                  </div>
-              </div>
-              
-              <div class="project-meta">
-                  <div class="project-dates">
-                      <small>
-                          <i class="fas fa-calendar-plus"></i>
-                          Created ${window.Utils.getRelativeTime(project.createdAt)}
-                      </small>
-                      <small>
-                          <i class="fas fa-clock"></i>
-                          Updated ${window.Utils.getRelativeTime(project.updatedAt)}
-                      </small>
-                  </div>
-              </div>
-              
-              <div class="project-actions">
-                  <button class="project-action" data-action="view" data-project-id="${
-                    project.id
-                  }" title="View Project">
-                      <i class="fas fa-eye"></i>
-                      View
-                  </button>
-                  <button class="project-action" data-action="edit" data-project-id="${
-                    project.id
-                  }" title="Edit Project">
-                      <i class="fas fa-edit"></i>
-                      Edit
-                  </button>
-                  <button class="project-action" data-action="configure" data-project-id="${
-                    project.id
-                  }" title="Configurer Les Tiroirs">
-                      <i class="fas fa-cog"></i>
-                      Configure
-                  </button>
-                  <button class="project-action danger" data-action="delete" data-project-id="${
-                    project.id
-                  }" title="Delete Project">
-                      <i class="fas fa-trash"></i>
-                      Delete
-                  </button>
-              </div>
-          </div>
-      `;
+        <div class="project-card hover-lift" 
+             style="animation-delay: ${index * 0.1}s;" 
+             data-project-id="${project.id}"
+             onclick="window.Projects.configureProject('${project.id}')">
+            
+            <div class="project-header">
+                <div class="project-info">
+                    <h3>${project.name}</h3>
+                    <span class="project-reference">${project.reference}</span>
+                </div>
+                <span class="project-status ${project.status}" style="background-color: ${statusColor};">
+                    ${this.getStatusLabel(project.status)}
+                </span>
+            </div>
+            
+            <div class="project-progress">
+                <div class="progress-header">
+                    <span class="progress-label">Configuration Progress</span>
+                    <span class="progress-percentage">${progress}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progress}%"></div>
+                </div>
+            </div>
+            
+            <div class="project-stats">
+                <div class="project-stat">
+                    <span class="project-stat-number">${project.totalFibers || 0}</span>
+                    <span class="project-stat-label">Total Fibers</span>
+                </div>
+                <div class="project-stat">
+                    <span class="project-stat-number">${project.configuredFibers || 0}</span>
+                    <span class="project-stat-label">Configured</span>
+                </div>
+                <div class="project-stat">
+                    <span class="project-stat-number">${project.pbos || 0}</span>
+                    <span class="project-stat-label">PBO(s)</span>
+                </div>
+                <div class="project-stat">
+                    <span class="project-stat-number">${project.pbis || 0}</span>
+                    <span class="project-stat-label">PBI(s)</span>
+                </div>
+            </div>
+            
+            <div class="project-meta">
+                <div class="project-dates">
+                    <small>
+                        <i class="fas fa-calendar-plus"></i>
+                        Created ${window.Utils.getRelativeTime(project.createdAt)}
+                    </small>
+                    <small>
+                        <i class="fas fa-clock"></i>
+                        Updated ${window.Utils.getRelativeTime(project.updatedAt)}
+                    </small>
+                </div>
+            </div>
+            
+            <div class="project-actions">
+                <button class="project-action" data-action="edit" data-project-id="${
+                  project.id
+                }" title="Edit Project" onclick="event.stopPropagation()">
+                    <i class="fas fa-edit"></i>
+                    Edit
+                </button>
+                <button class="project-action danger" data-action="delete" data-project-id="${
+                  project.id
+                }" title="Delete Project" onclick="event.stopPropagation()">
+                    <i class="fas fa-trash"></i>
+                    Delete
+                </button>
+            </div>
+        </div>
+    `;
   },
 
   renderEmptyState() {
@@ -319,20 +321,14 @@ window.Projects = {
     const actionButtons = document.querySelectorAll(".project-action[data-action]");
     actionButtons.forEach((button) => {
       button.addEventListener("click", (e) => {
-        e.stopPropagation(); // Prevent any parent click handlers
+        e.stopPropagation(); // Prevent card click
 
         const action = button.getAttribute("data-action");
         const projectId = button.getAttribute("data-project-id");
 
         switch (action) {
-          case "view":
-            this.viewProject(projectId);
-            break;
           case "edit":
             this.editProject(projectId);
-            break;
-          case "configure":
-            this.configureProject(projectId);
             break;
           case "delete":
             this.deleteProject(projectId);
@@ -431,10 +427,10 @@ window.Projects = {
               
               <div class="project-actions-modal">
                   <button class="btn-primary" data-action="configure" data-project-id="${projectId}">
-                      <i class="fas fa-cog"></i> Configurer Les Tiroirs
+                      <i class="fas fa-cog"></i> Configure Fibers
                   </button>
-                  <button class="btn-secondary" data-action="edit" data-project-id="${projectId}">
-                      <i class="fas fa-edit"></i> Edit Project
+                  <button class="btn-secondary" onclick="window.Components.closeModal()">
+                      <i class="fas fa-times"></i> Close
                   </button>
               </div>
           </div>
@@ -485,9 +481,15 @@ window.Projects = {
   },
 
   editProject(projectId) {
-    console.log(`✏️ Editing project: ${projectId}`);
-    // Navigate to project edit page
-    window.Components.showToast("info", "Coming Soon", "Project editing functionality will be available soon");
+    console.log(`⚙️ Opening fiber configuration for project: ${projectId}`);
+
+    // Navigate to configure page and initialize
+    window.Navigation.showPage("configure");
+
+    // Initialize fiber configuration after page is shown
+    setTimeout(() => {
+      window.FiberConfig.init(projectId);
+    }, 100);
   },
 
   configureProject(projectId) {

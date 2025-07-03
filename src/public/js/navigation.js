@@ -5,7 +5,7 @@
 
 window.Navigation = {
   currentPage: "dashboard",
-  pages: ["dashboard", "projects", "create", "about"],
+  pages: ["dashboard", "projects", "create", "configure", "about"],
 
   // ==================
   // INITIALIZATION

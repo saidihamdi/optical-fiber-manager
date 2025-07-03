@@ -161,14 +161,15 @@ window.Components = {
   // PROJECT WIZARD - FIXED VERSION
   // ==================
 
+  // Replace the createProjectWizard function in your components.js
+
   createProjectWizard(container) {
-    // Define wizard configuration
+    // Define wizard configuration - NOW ONLY 3 STEPS
     const wizardConfig = {
       steps: [
         { id: "basic", title: "Project Info", number: 1 },
         { id: "upload", title: "Upload Excel", number: 2 },
         { id: "process", title: "Process Data", number: 3 },
-        { id: "complete", title: "Complete", number: 4 },
       ],
       currentStep: 0,
       projectData: {},
@@ -177,48 +178,48 @@ window.Components = {
     // Render function that maintains state
     const renderWizard = () => {
       container.innerHTML = `
-        <div class="wizard-container">
-          <div class="wizard-header">
-            <h2 class="wizard-title">Create New Project</h2>
-            <p class="wizard-subtitle">Set up your optical fiber project in a few simple steps</p>
-          </div>
-          
-          <div class="wizard-steps">
-            ${wizardConfig.steps
-              .map(
-                (step, index) => `
-              <div class="wizard-step ${index === wizardConfig.currentStep ? "active" : ""} ${
-                  index < wizardConfig.currentStep ? "completed" : ""
-                }">
-                <div class="step-number">${step.number}</div>
-                <div class="step-title">${step.title}</div>
-              </div>
-            `
-              )
-              .join("")}
-          </div>
-          
-          <div class="wizard-content" id="wizard-step-content">
-            ${this.renderWizardStep(wizardConfig.steps[wizardConfig.currentStep].id, wizardConfig.projectData)}
-          </div>
-          
-          <div class="wizard-actions">
-            <div class="wizard-nav">
-              <button class="btn-secondary" id="wizard-prev" ${wizardConfig.currentStep === 0 ? "disabled" : ""}>
-                <i class="fas fa-arrow-left"></i> Previous
-              </button>
-              <button class="btn-primary" id="wizard-next">
-                ${wizardConfig.currentStep === wizardConfig.steps.length - 1 ? "Finish" : "Next"} 
-                <i class="fas fa-arrow-right"></i>
-              </button>
+      <div class="wizard-container">
+        <div class="wizard-header">
+          <h2 class="wizard-title">Create New Project</h2>
+          <p class="wizard-subtitle">Set up your optical fiber project in a few simple steps</p>
+        </div>
+        
+        <div class="wizard-steps">
+          ${wizardConfig.steps
+            .map(
+              (step, index) => `
+            <div class="wizard-step ${index === wizardConfig.currentStep ? "active" : ""} ${
+                index < wizardConfig.currentStep ? "completed" : ""
+              }">
+              <div class="step-number">${step.number}</div>
+              <div class="step-title">${step.title}</div>
             </div>
-            
-            <button class="btn-secondary" id="save-draft">
-              <i class="fas fa-save"></i> Save Draft
+          `
+            )
+            .join("")}
+        </div>
+        
+        <div class="wizard-content" id="wizard-step-content">
+          ${this.renderWizardStep(wizardConfig.steps[wizardConfig.currentStep].id, wizardConfig.projectData)}
+        </div>
+        
+        <div class="wizard-actions" id="wizard-actions">
+          <div class="wizard-nav">
+            <button class="btn-secondary" id="wizard-prev" ${wizardConfig.currentStep === 0 ? "disabled" : ""}>
+              <i class="fas fa-arrow-left"></i> Previous
+            </button>
+            <button class="btn-primary" id="wizard-next">
+              ${wizardConfig.currentStep === wizardConfig.steps.length - 1 ? "Complete Setup" : "Next"} 
+              <i class="fas fa-arrow-right"></i>
             </button>
           </div>
+          
+          <button class="btn-secondary" id="save-draft">
+            <i class="fas fa-save"></i> Save Draft
+          </button>
         </div>
-      `;
+      </div>
+    `;
 
       // Setup event listeners AFTER HTML is created
       this.setupWizardEventListeners(wizardConfig, renderWizard);
@@ -279,108 +280,88 @@ window.Components = {
     switch (stepId) {
       case "basic":
         return `
-          <div class="step-basic">
-            <h3>Project Information</h3>
-            <div class="form-group">
-              <label class="form-label" for="project-name">Project Name *</label>
-              <input type="text" class="form-input" id="project-name" 
-                     placeholder="Enter project name" value="${projectData.name || ""}" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="project-description">Description</label>
-              <textarea class="form-textarea" id="project-description" 
-                        placeholder="Optional project description">${projectData.description || ""}</textarea>
-            </div>
+        <div class="step-basic">
+          <h3>Project Information</h3>
+          <div class="form-group">
+            <label class="form-label" for="project-name">Project Name *</label>
+            <input type="text" class="form-input" id="project-name" 
+                   placeholder="Enter project name" value="${projectData.name || ""}" required>
           </div>
-        `;
+          <div class="form-group">
+            <label class="form-label" for="project-description">Description</label>
+            <textarea class="form-textarea" id="project-description" 
+                      placeholder="Optional project description">${projectData.description || ""}</textarea>
+          </div>
+        </div>
+      `;
 
       case "upload":
         return `
-          <div class="step-upload">
-            <h3>Upload Excel File</h3>
-            <p>Upload your "base rop" Excel file containing the fiber data.</p>
-            
-            <div class="file-upload-area" id="file-upload-area">
-              <div class="file-upload-icon">
-                <i class="fas fa-file-excel"></i>
-              </div>
-              <div class="file-upload-text">
-                Click to select or drag and drop your Excel file
-              </div>
-              <div class="file-upload-hint">
-                Supported formats: .xlsx, .xls (Max size: 50MB)
-              </div>
-              <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
+        <div class="step-upload">
+          <h3>Upload Excel File</h3>
+          <p>Upload your "base rop" Excel file containing the fiber data.</p>
+          
+          <div class="file-upload-area" id="file-upload-area">
+            <div class="file-upload-icon">
+              <i class="fas fa-file-excel"></i>
             </div>
-            
-            <div id="file-info" style="display: none;" class="file-info">
-              <div class="file-selected">
-                <div class="file-details">
-                  <i class="fas fa-file-excel"></i>
-                  <div class="file-text">
-                    <span id="file-name"></span>
-                    <span id="file-size"></span>
-                  </div>
+            <div class="file-upload-text">
+              Click to select or drag and drop your Excel file
+            </div>
+            <div class="file-upload-hint">
+              Supported formats: .xlsx, .xls (Max size: 50MB)
+            </div>
+            <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
+          </div>
+          
+          <div id="file-info" style="display: none;" class="file-info">
+            <div class="file-selected">
+              <div class="file-details">
+                <i class="fas fa-file-excel"></i>
+                <div class="file-text">
+                  <span id="file-name"></span>
+                  <span id="file-size"></span>
                 </div>
-                <button class="btn-remove-file" id="remove-file" title="Remove file">
-                  <i class="fas fa-times"></i>
-                  Remove
-                </button>
               </div>
+              <button class="btn-remove-file" id="remove-file" title="Remove file">
+                <i class="fas fa-times"></i>
+                Remove
+              </button>
             </div>
           </div>
-        `;
+        </div>
+      `;
 
       case "process":
         return `
-          <div class="step-process">
-            <h3>Processing Excel Data</h3>
-            <div id="processing-status">
-              <div class="loading-spinner"></div>
-              <p>Reading and processing your Excel file...</p>
-            </div>
-            
-            <div id="processing-results" style="display: none;">
-              <div class="processing-success">
-                <div class="success-checkmark"></div>
-                <h4>Processing Complete!</h4>
-                <div class="processing-stats" id="processing-stats">
-                  <!-- Stats will be inserted here -->
-                </div>
-              </div>
-            </div>
+        <div class="step-process">
+          <h3>Processing Excel Data</h3>
+          <div id="processing-status">
+            <div class="loading-spinner"></div>
+            <p>Reading and processing your Excel file...</p>
           </div>
-        `;
-
-      case "complete":
-        return `
-          <div class="step-complete">
-            <div class="completion-success">
+          
+          <div id="processing-results" style="display: none;">
+            <div class="processing-success">
               <div class="success-checkmark"></div>
-              <h3>Project Created Successfully!</h3>
-              <p>Your optical fiber project has been set up and is ready for configuration.</p>
+              <h4>Setup Complete!</h4>
+              <p>Your project has been created and Excel data has been processed successfully.</p>
               
-              <div class="project-summary">
-                <h4>Project Summary</h4>
-                <div class="summary-item">
-                  <strong>Name:</strong> ${projectData.name || "N/A"}
-                </div>
-                <div class="summary-item">
-                  <strong>Total Fibers:</strong> ${projectData.totalFibers || 0}
-                </div>
+              <div class="processing-stats" id="processing-stats">
+                <!-- Stats will be inserted here -->
               </div>
               
-              <div class="completion-actions">
-                <button class="btn-primary" data-action="start-configuration">
-                  <i class="fas fa-cog"></i> Start Configuration
-                </button>
-                <button class="btn-secondary" data-action="view-project">
-                  <i class="fas fa-eye"></i> View Project
-                </button>
+              <div class="setup-complete-actions">
+                <div class="action-buttons">
+                  <button class="btn-primary" id="go-to-projects">
+                    <i class="fas fa-folder-open"></i> Go to Projects
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        `;
+        </div>
+      `;
     }
   },
 
@@ -409,16 +390,6 @@ window.Components = {
 
       case "process":
         this.processExcelFile(projectData);
-        break;
-
-      case "complete":
-        const actionButtons = document.querySelectorAll("[data-action]");
-        actionButtons.forEach((button) => {
-          button.addEventListener("click", (e) => {
-            const action = e.target.getAttribute("data-action");
-            this.handleCompletionAction(action, projectData);
-          });
-        });
         break;
     }
   },
@@ -656,32 +627,50 @@ window.Components = {
     const statusElement = document.getElementById("processing-status");
     const resultsElement = document.getElementById("processing-results");
     const statsElement = document.getElementById("processing-stats");
+    const wizardActions = document.getElementById("wizard-actions");
 
     if (statusElement) statusElement.style.display = "none";
     if (resultsElement) resultsElement.style.display = "block";
 
+    // HIDE wizard navigation when setup is complete
+    if (wizardActions) {
+      wizardActions.style.display = "none";
+    }
+
     if (statsElement) {
       statsElement.innerHTML = `
-        <div class="stat-grid">
-          <div class="stat-item">
-            <div class="stat-number">${stats.totalFibers}</div>
-            <div class="stat-label">Total Fibers</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number">${stats.tiroirs}</div>
-            <div class="stat-label">Tiroirs</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number">${stats.pbos}</div>
-            <div class="stat-label">PBO(s)</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number">${stats.pbis}</div>
-            <div class="stat-label">PBI(s)</div>
-          </div>
+      <div class="stat-grid">
+        <div class="stat-item">
+          <div class="stat-number">${stats.totalFibers}</div>
+          <div class="stat-label">Total Fibers</div>
         </div>
-      `;
+        <div class="stat-item">
+          <div class="stat-number">${stats.tiroirs}</div>
+          <div class="stat-label">Tiroirs</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">${stats.pbos}</div>
+          <div class="stat-label">PBO(s)</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">${stats.pbis}</div>
+          <div class="stat-label">PBI(s)</div>
+        </div>
+      </div>
+    `;
     }
+
+    // Add event listeners for action buttons
+    setTimeout(() => {
+      const goToProjectsBtn = document.getElementById("go-to-projects");
+
+      if (goToProjectsBtn) {
+        goToProjectsBtn.addEventListener("click", () => {
+          console.log("🔗 Navigating to projects page");
+          window.Navigation.showPage("projects");
+        });
+      }
+    }, 100);
   },
 
   showProcessingError(error) {
@@ -727,14 +716,14 @@ window.Components = {
     }
   },
 
-  completeWizard(projectData) {
-    this.showToast("success", "Project Created", "Your project has been created successfully!");
+  // Replace the completeWizard function in your components.js
 
-    setTimeout(() => {
-      if (window.Navigation) {
-        window.Navigation.showPage("projects");
-      }
-    }, 2000);
+  completeWizard(projectData) {
+    // Since we end at step 3 (process), this function now just shows success and navigates
+    this.showToast("success", "Project Setup Complete", "Your project is ready for fiber configuration!");
+
+    // Don't auto-navigate - let user choose from the buttons in step 3
+    console.log("🎉 Project setup completed:", projectData.name);
   },
 
   saveProjectDraft(projectData) {

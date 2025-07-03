@@ -112,54 +112,67 @@ window.Dashboard = {
 
     if (projects.length === 0) {
       container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-folder-open"></i>
-                    <h4>No Projects Yet</h4>
-                    <p>Create your first optical fiber project to get started.</p>
-                    <button class="btn-primary" onclick="window.Navigation.showPage('create')">
-                        <i class="fas fa-plus"></i> Create Project
-                    </button>
-                </div>
-            `;
+          <div class="empty-state">
+              <i class="fas fa-folder-open"></i>
+              <h4>No Projects Yet</h4>
+              <p>Create your first optical fiber project to get started.</p>
+              <button class="btn-primary" id="dashboard-create-project">
+                  <i class="fas fa-plus"></i> Create Project
+              </button>
+          </div>
+      `;
+
+      // Add event listener for the create project button
+      setTimeout(() => {
+        const createBtn = document.getElementById("dashboard-create-project");
+        if (createBtn) {
+          createBtn.addEventListener("click", () => {
+            console.log("🔗 Dashboard: Creating new project");
+            window.Navigation.showPage("create");
+          });
+        }
+      }, 100);
+
       return;
     }
 
+    // Rest of your existing code for when projects exist...
     container.innerHTML = projects
       .map(
         (project, index) => `
-            <div class="project-card recent-project animate__animated animate__fadeInUp" 
-                 style="animation-delay: ${index * 0.1}s;" 
-                 onclick="window.Dashboard.viewProject('${project.id}')">
-                <div class="project-header">
-                    <div class="project-info">
-                        <h4>${project.name}</h4>
-                        <span class="project-reference">${project.reference}</span>
-                    </div>
-                    <span class="project-status ${project.status}">${this.getStatusLabel(project.status)}</span>
-                </div>
-                
-                <div class="project-progress">
-                    <div class="progress-header">
-                        <span class="progress-label">Configuration Progress</span>
-                        <span class="progress-percentage">${this.calculateProgress(project)}%</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${this.calculateProgress(project)}%"></div>
-                    </div>
-                </div>
-                
-                <div class="project-meta">
-                    <small class="project-date">
-                        <i class="fas fa-clock"></i>
-                        Updated ${window.Utils.getRelativeTime(project.updatedAt)}
-                    </small>
-                    <small class="project-fibers">
-                        <i class="fas fa-bezier-curve"></i>
-                        ${project.totalFibers || 0} fibers
-                    </small>
-                </div>
-            </div>
-        `
+          <div class="project-card recent-project animate__animated animate__fadeInUp" 
+               style="animation-delay: ${index * 0.1}s;" 
+               onclick="window.Dashboard.viewProject('${project.id}')">
+              <div class="project-header">
+                  <div class="project-info">
+                      <h4>${project.name}</h4>
+                      <span class="project-reference">${project.reference}</span>
+                  </div>
+                  <span class="project-status ${project.status}">${this.getStatusLabel(project.status)}</span>
+              </div>
+              
+              <div class="project-progress">
+                  <div class="progress-header">
+                      <span class="progress-label">Configuration Progress</span>
+                      <span class="progress-percentage">${this.calculateProgress(project)}%</span>
+                  </div>
+                  <div class="progress-bar">
+                      <div class="progress-fill" style="width: ${this.calculateProgress(project)}%"></div>
+                  </div>
+              </div>
+              
+              <div class="project-meta">
+                  <small class="project-date">
+                      <i class="fas fa-clock"></i>
+                      Updated ${window.Utils.getRelativeTime(project.updatedAt)}
+                  </small>
+                  <small class="project-fibers">
+                      <i class="fas fa-bezier-curve"></i>
+                      ${project.totalFibers || 0} fibers
+                  </small>
+              </div>
+          </div>
+      `
       )
       .join("");
   },
