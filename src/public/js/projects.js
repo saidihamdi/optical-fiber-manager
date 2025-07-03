@@ -234,11 +234,11 @@ window.Projects = {
                   </div>
                   <div class="project-stat">
                       <span class="project-stat-number">${project.pbos || 0}</span>
-                      <span class="project-stat-label">PBOs</span>
+                      <span class="project-stat-label">PBO(s)</span>
                   </div>
                   <div class="project-stat">
                       <span class="project-stat-number">${project.pbis || 0}</span>
-                      <span class="project-stat-label">PBIs</span>
+                      <span class="project-stat-label">PBI(s)</span>
                   </div>
               </div>
               
@@ -270,7 +270,7 @@ window.Projects = {
                   </button>
                   <button class="project-action" data-action="configure" data-project-id="${
                     project.id
-                  }" title="Configure Fibers">
+                  }" title="Configurer Les Tiroirs">
                       <i class="fas fa-cog"></i>
                       Configure
                   </button>
@@ -431,7 +431,7 @@ window.Projects = {
               
               <div class="project-actions-modal">
                   <button class="btn-primary" data-action="configure" data-project-id="${projectId}">
-                      <i class="fas fa-cog"></i> Configure Fibers
+                      <i class="fas fa-cog"></i> Configurer Les Tiroirs
                   </button>
                   <button class="btn-secondary" data-action="edit" data-project-id="${projectId}">
                       <i class="fas fa-edit"></i> Edit Project

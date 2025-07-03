@@ -514,9 +514,12 @@ window.Components = {
     return true;
   },
 
+  // Replace your processExcelFile function in components.js with this version
+  // that includes better error handling and debugging
+
   async processExcelFile(projectData) {
     try {
-      console.log("Creating project with data:", projectData);
+      console.log("🔥 Creating project with data:", projectData);
 
       // Add timestamp to make name unique if there's a conflict
       let projectName = projectData.name;
@@ -546,33 +549,105 @@ window.Components = {
         throw new Error("Could not create project after multiple attempts. Please use a different name.");
       }
 
-      projectData.projectId = createResponse.project.id; // ✅ Use ID, not name
-      console.log("Project created with ID:", projectData.projectId);
+      projectData.projectId = createResponse.project.id;
+      console.log("✅ Project created with ID:", projectData.projectId);
 
-      console.log("Uploading Excel file...");
-      await window.API.upload.excel(projectData.projectId, projectData.excelFile);
+      // WAIT A MOMENT for project to be fully created
+      console.log("⏳ Waiting for project to be fully initialized...");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      console.log("Processing Excel file...");
-      const processResponse = await window.API.excel.process(projectData.projectId);
+      // VERIFY PROJECT EXISTS before uploading
+      console.log("🔍 Verifying project exists before upload...");
+      try {
+        const verifyResponse = await window.API.projects.get(projectData.projectId);
+        console.log("✅ Project verification successful:", verifyResponse.project.name);
+      } catch (error) {
+        console.error("❌ Project verification failed:", error);
+        throw new Error("Project was created but cannot be verified. Please try again.");
+      }
 
+      console.log("📤 Starting Excel file upload...");
+      console.log("📄 File details:", {
+        name: projectData.excelFile.name,
+        size: projectData.excelFile.size,
+        type: projectData.excelFile.type,
+      });
+
+      // Upload with detailed error handling
+      let uploadResponse;
+      try {
+        uploadResponse = await window.API.upload.excel(projectData.projectId, projectData.excelFile);
+        console.log("✅ Upload successful:", uploadResponse);
+      } catch (uploadError) {
+        console.error("❌ Upload failed:", uploadError);
+        console.error("📋 Upload error details:", {
+          message: uploadError.message,
+          stack: uploadError.stack,
+          projectId: projectData.projectId,
+          fileName: projectData.excelFile.name,
+        });
+
+        // Try to get more details about the error
+        if (uploadError.message.includes("404")) {
+          throw new Error(
+            `Upload failed: Project ${projectData.projectId} not found on server. The project may not have been created properly.`
+          );
+        } else if (uploadError.message.includes("413")) {
+          throw new Error("Upload failed: File is too large (max 50MB)");
+        } else if (uploadError.message.includes("400")) {
+          throw new Error("Upload failed: Invalid file format. Please use .xlsx or .xls files only.");
+        } else {
+          throw new Error(`Upload failed: ${uploadError.message}`);
+        }
+      }
+
+      console.log("⚙️ Starting Excel file processing...");
+      let processResponse;
+      try {
+        processResponse = await window.API.excel.process(projectData.projectId);
+        console.log("✅ Processing successful:", processResponse.stats);
+      } catch (processError) {
+        console.error("❌ Processing failed:", processError);
+        throw new Error(`Excel processing failed: ${processError.message}`);
+      }
+
+      // Update project data with stats
       projectData.totalFibers = processResponse.stats.totalFibers;
       projectData.tiroirs = processResponse.stats.tiroirs;
       projectData.pbos = processResponse.stats.pbos;
       projectData.pbis = processResponse.stats.pbis;
 
       // Update the project with the processed stats
-      await window.API.projects.update(projectData.projectId, {
-        totalFibers: processResponse.stats.totalFibers,
-        pbos: processResponse.stats.pbos,
-        pbis: processResponse.stats.pbis,
-        tiroirs: processResponse.stats.tiroirs,
-        status: "excel-processed",
-      });
+      try {
+        await window.API.projects.update(projectData.projectId, {
+          totalFibers: processResponse.stats.totalFibers,
+          pbos: processResponse.stats.pbos,
+          pbis: processResponse.stats.pbis,
+          tiroirs: processResponse.stats.tiroirs,
+          status: "excel-processed",
+        });
+        console.log("✅ Project updated with stats");
+      } catch (updateError) {
+        console.error("❌ Failed to update project with stats:", updateError);
+        // Don't throw here - the main process succeeded
+      }
 
-      console.log("Processing complete:", processResponse.stats);
+      console.log("🎉 Processing complete:", processResponse.stats);
       this.showProcessingResults(processResponse.stats);
     } catch (error) {
-      console.error("Processing error:", error);
+      console.error("💥 Processing error:", error);
+
+      // Clean up project if it was created but process failed
+      if (projectData.projectId) {
+        console.log("🧹 Cleaning up failed project...");
+        try {
+          await window.API.projects.delete(projectData.projectId);
+          console.log("✅ Failed project cleaned up");
+        } catch (cleanupError) {
+          console.error("❌ Failed to clean up project:", cleanupError);
+        }
+      }
+
       this.showProcessingError(error);
     }
   },
@@ -598,11 +673,11 @@ window.Components = {
           </div>
           <div class="stat-item">
             <div class="stat-number">${stats.pbos}</div>
-            <div class="stat-label">PBOs</div>
+            <div class="stat-label">PBO(s)</div>
           </div>
           <div class="stat-item">
             <div class="stat-number">${stats.pbis}</div>
-            <div class="stat-label">PBIs</div>
+            <div class="stat-label">PBI(s)</div>
           </div>
         </div>
       `;

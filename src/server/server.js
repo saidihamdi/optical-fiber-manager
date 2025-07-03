@@ -32,10 +32,66 @@ class OpticalFiberServer {
       res.sendFile(path.join(__dirname, "../public/index.html"));
     });
 
-    // API routes
-    this.app.use("/api/projects", require("./routes/projects"));
-    this.app.use("/api/upload", require("./routes/upload"));
-    this.app.use("/api/excel", require("./routes/excel"));
+    // Debug: Check if route files exist
+    console.log("🔍 Checking route files...");
+
+    const projectsPath = path.join(__dirname, "./routes/projects");
+    const uploadPath = path.join(__dirname, "./routes/upload");
+    const excelPath = path.join(__dirname, "./routes/excel");
+
+    console.log("📁 Projects route path:", projectsPath);
+    console.log("📁 Upload route path:", uploadPath);
+    console.log("📁 Excel route path:", excelPath);
+
+    // Check if files exist
+    const fs = require("fs");
+    console.log("📁 Projects file exists:", fs.existsSync(projectsPath + ".js"));
+    console.log("📁 Upload file exists:", fs.existsSync(uploadPath + ".js"));
+    console.log("📁 Excel file exists:", fs.existsSync(excelPath + ".js"));
+
+    // Try to load routes with detailed error handling
+    console.log("📁 Loading routes...");
+
+    try {
+      console.log("⏳ Loading projects routes...");
+      const projectsRouter = require("./routes/projects");
+      this.app.use("/api/projects", projectsRouter);
+      console.log("✅ Projects routes loaded successfully");
+    } catch (error) {
+      console.error("❌ Error loading projects routes:", error.message);
+      console.error("Stack:", error.stack);
+    }
+
+    try {
+      console.log("⏳ Loading upload routes...");
+      const uploadRouter = require("./routes/upload");
+      console.log("📝 Upload router type:", typeof uploadRouter);
+      console.log("📝 Upload router:", uploadRouter);
+      this.app.use("/api/upload", uploadRouter);
+      console.log("✅ Upload routes loaded successfully");
+    } catch (error) {
+      console.error("❌ Error loading upload routes:", error.message);
+      console.error("Stack:", error.stack);
+    }
+
+    try {
+      console.log("⏳ Loading excel routes...");
+      const excelRouter = require("./routes/excel");
+      this.app.use("/api/excel", excelRouter);
+      console.log("✅ Excel routes loaded successfully");
+    } catch (error) {
+      console.error("❌ Error loading excel routes:", error.message);
+      console.error("Stack:", error.stack);
+    }
+
+    // Test route to verify server is working
+    this.app.get("/api/test", (req, res) => {
+      res.json({
+        success: true,
+        message: "Server is working",
+        timestamp: new Date().toISOString(),
+      });
+    });
 
     // Health check
     this.app.get("/api/health", (req, res) => {
@@ -46,11 +102,41 @@ class OpticalFiberServer {
       });
     });
 
-    // 404 handler
+    // List all registered routes (for debugging)
+    this.app.get("/api/debug/routes", (req, res) => {
+      const routes = [];
+      this.app._router.stack.forEach((middleware) => {
+        if (middleware.route) {
+          routes.push({
+            path: middleware.route.path,
+            methods: Object.keys(middleware.route.methods),
+          });
+        } else if (middleware.name === "router") {
+          middleware.handle.stack.forEach((handler) => {
+            if (handler.route) {
+              routes.push({
+                path: handler.route.path,
+                methods: Object.keys(handler.route.methods),
+              });
+            }
+          });
+        }
+      });
+
+      res.json({
+        success: true,
+        routes: routes,
+      });
+    });
+
+    // 404 handler - MUST be after all routes
     this.app.use("*", (req, res) => {
+      console.log(`❌ 404 - Route not found: ${req.method} ${req.originalUrl}`);
       res.status(404).json({
         error: "Route not found",
         message: "The requested endpoint does not exist",
+        path: req.originalUrl,
+        method: req.method,
       });
     });
 

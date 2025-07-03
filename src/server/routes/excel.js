@@ -7,33 +7,59 @@ const sanitizeFilename = require("sanitize-filename");
 
 const PROJECTS_DIR = path.join(__dirname, "../../../data/projects");
 
+// Replace your excel routes in excel.js with these fixed versions
+
 // Process Excel file and extract data
 router.post("/:projectId/process", async (req, res) => {
   try {
-    const projectId = sanitizeFilename(req.params.projectId);
-    const projectPath = path.join(PROJECTS_DIR, projectId);
-    const jsonFile = path.join(projectPath, `${projectId}.json`);
+    const projectId = req.params.projectId;
+    console.log(`📊 Processing Excel file for project ID: ${projectId}`);
 
-    if (!(await fs.pathExists(jsonFile))) {
+    // Find project by ID in all project folders (same logic as other routes)
+    const projectFolders = await fs.readdir(PROJECTS_DIR);
+    let foundProject = null;
+    let projectPath = null;
+    let jsonFile = null;
+
+    for (const folder of projectFolders) {
+      const folderPath = path.join(PROJECTS_DIR, folder);
+      const stat = await fs.stat(folderPath);
+
+      if (stat.isDirectory()) {
+        const jsonFilePath = path.join(folderPath, `${folder}.json`);
+
+        if (await fs.pathExists(jsonFilePath)) {
+          const projectData = await fs.readJson(jsonFilePath);
+          if (projectData.id === projectId) {
+            foundProject = projectData;
+            projectPath = folderPath;
+            jsonFile = jsonFilePath;
+            console.log(`✅ Found project: ${foundProject.name} in folder: ${folder}`);
+            break;
+          }
+        }
+      }
+    }
+
+    if (!foundProject) {
+      console.log(`❌ Project not found with ID: ${projectId}`);
       return res.status(404).json({
         success: false,
         error: "Project not found",
       });
     }
 
-    const projectData = await fs.readJson(jsonFile);
-
-    if (!projectData.excelFile || !projectData.excelFile.path) {
+    if (!foundProject.excelFile || !foundProject.excelFile.path) {
       return res.status(400).json({
         success: false,
         error: "No Excel file found for this project",
       });
     }
 
-    console.log(`📊 Processing Excel file for project: ${projectId}`);
+    console.log(`📊 Processing Excel file: ${foundProject.excelFile.originalName}`);
 
     // Read Excel file
-    const workbook = XLSX.readFile(projectData.excelFile.path);
+    const workbook = XLSX.readFile(foundProject.excelFile.path);
     const sheetName = workbook.SheetNames[0]; // Use first sheet
     const worksheet = workbook.Sheets[sheetName];
 
@@ -41,21 +67,21 @@ router.post("/:projectId/process", async (req, res) => {
     const processedData = await parseExcelData(worksheet);
 
     // Update project with processed data
-    projectData.data = processedData.data;
-    projectData.progress = {
+    foundProject.data = processedData.data;
+    foundProject.progress = {
       totalFibers: processedData.stats.totalFibers,
       configuredFibers: 0,
       currentTiroir: null,
       currentModule: null,
       currentPBO: null,
     };
-    projectData.rawData = processedData.rawData;
-    projectData.status = "excel-processed";
-    projectData.updatedAt = new Date().toISOString();
+    foundProject.rawData = processedData.rawData;
+    foundProject.status = "excel-processed";
+    foundProject.updatedAt = new Date().toISOString();
 
-    await fs.writeJson(jsonFile, projectData, { spaces: 2 });
+    await fs.writeJson(jsonFile, foundProject, { spaces: 2 });
 
-    console.log(`✅ Excel processing completed for project: ${projectId}`);
+    console.log(`✅ Excel processing completed for project: ${foundProject.name}`);
     console.log(
       `📈 Stats: ${processedData.stats.totalFibers} fibers, ${processedData.stats.tiroirs} tiroirs, ${processedData.stats.pbos} PBOs`
     );
@@ -79,24 +105,41 @@ router.post("/:projectId/process", async (req, res) => {
 // Get processed data
 router.get("/:projectId/data", async (req, res) => {
   try {
-    const projectId = sanitizeFilename(req.params.projectId);
-    const projectPath = path.join(PROJECTS_DIR, projectId);
-    const jsonFile = path.join(projectPath, `${projectId}.json`);
+    const projectId = req.params.projectId;
 
-    if (!(await fs.pathExists(jsonFile))) {
+    // Find project by ID in all project folders
+    const projectFolders = await fs.readdir(PROJECTS_DIR);
+    let foundProject = null;
+
+    for (const folder of projectFolders) {
+      const folderPath = path.join(PROJECTS_DIR, folder);
+      const stat = await fs.stat(folderPath);
+
+      if (stat.isDirectory()) {
+        const jsonFile = path.join(folderPath, `${folder}.json`);
+
+        if (await fs.pathExists(jsonFile)) {
+          const projectData = await fs.readJson(jsonFile);
+          if (projectData.id === projectId) {
+            foundProject = projectData;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!foundProject) {
       return res.status(404).json({
         success: false,
         error: "Project not found",
       });
     }
 
-    const projectData = await fs.readJson(jsonFile);
-
     res.json({
       success: true,
-      data: projectData.data || {},
-      progress: projectData.progress || {},
-      stats: calculateStats(projectData.data || {}),
+      data: foundProject.data || {},
+      progress: foundProject.progress || {},
+      stats: calculateStats(foundProject.data || {}),
     });
   } catch (error) {
     console.error("❌ Error fetching Excel data:", error);
