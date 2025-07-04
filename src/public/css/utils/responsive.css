@@ -144,7 +144,7 @@
 
     /* Fiber grid adjustments */
     .fiber-grid-24 {
-        grid-template-columns: repeat(8, 1fr);
+        grid-template-columns: repeat(12, 1fr);
     }
 
     .fiber-grid-24 .fiber-port {
@@ -282,7 +282,7 @@
 
     /* Fiber grid ultra-compact */
     .fiber-grid-24 {
-        grid-template-columns: repeat(6, 1fr);
+        grid-template-columns: repeat(12, 1fr);
     }
 
     .fiber-grid-24 .fiber-port {
