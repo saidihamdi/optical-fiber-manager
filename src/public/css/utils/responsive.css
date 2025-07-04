@@ -1,0 +1,549 @@
+/* ===========================
+   📱 RESPONSIVE DESIGN
+   All responsive breakpoints and mobile adaptations
+   =========================== */
+
+/* ================
+   LARGE SCREENS (1200px and down)
+   ================ */
+
+@media (max-width: 1200px) {
+
+    /* Module workspace becomes vertical */
+    .module-workspace {
+        flex-direction: column;
+        gap: var(--space-lg);
+    }
+
+    .fiber-grid-container {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .module-controls {
+        width: 100%;
+        min-width: 100%;
+        flex-direction: row;
+        justify-content: space-around;
+        margin-left: 0;
+    }
+
+    .voice-controls,
+    .module-actions {
+        flex-direction: row;
+        gap: var(--space-sm);
+        flex: 1;
+    }
+
+    .btn-voice-control,
+    .btn-module-action {
+        flex: 1;
+        min-width: 120px;
+    }
+}
+
+/* ================
+   TABLET (1024px and down)
+   ================ */
+
+@media (max-width: 1024px) {
+
+    /* Tiroir headers become vertical */
+    .tiroir-header {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+        gap: var(--space-lg);
+        text-align: center;
+    }
+
+    .tiroir-title {
+        grid-column: 1;
+        grid-row: 1;
+        justify-content: center;
+    }
+
+    .tiroir-photos {
+        grid-column: 1;
+        grid-row: 2;
+        justify-content: center;
+    }
+
+    .tiroir-stats {
+        grid-column: 1;
+        grid-row: 3;
+        justify-content: center;
+    }
+
+    .expand-arrow {
+        grid-column: 1;
+        grid-row: 4;
+        justify-self: center;
+    }
+
+    /* Stats alignment */
+    .tiroir-stats,
+    .module-stats {
+        justify-content: center;
+    }
+
+    /* Action buttons stack */
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .action-buttons .btn-primary,
+    .action-buttons .btn-secondary {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
+/* ================
+   MOBILE (768px and down)
+   ================ */
+
+@media (max-width: 768px) {
+
+    /* Configure container */
+    .configure-container {
+        padding: var(--space-md);
+    }
+
+    /* Project summary */
+    .project-summary {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+        text-align: center;
+    }
+
+    .project-stats-summary {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    /* Voice control panel */
+    .voice-control-panel {
+        flex-direction: column;
+        gap: var(--space-lg);
+        text-align: center;
+    }
+
+    /* Tiroir and module headers */
+    .tiroir-header,
+    .module-header {
+        padding: var(--space-lg);
+    }
+
+    .tiroir-title,
+    .module-title {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-sm);
+    }
+
+    /* Fiber grid adjustments */
+    .fiber-grid-24 {
+        grid-template-columns: repeat(8, 1fr);
+    }
+
+    .fiber-grid-24 .fiber-port {
+        width: 38px;
+        height: 38px;
+        font-size: 0.75rem;
+    }
+
+    /* Module controls */
+    .module-controls {
+        flex-direction: column;
+    }
+
+    .voice-controls,
+    .module-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* Stats layout */
+    .tiroir-stats,
+    .module-stats {
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+
+    /* Project cards */
+    .projects-container {
+        grid-template-columns: 1fr;
+    }
+
+    .project-header {
+        flex-direction: column;
+        gap: var(--space-md);
+        align-items: flex-start;
+    }
+
+    /* Search and filter */
+    .search-filter-row {
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+
+    .filter-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    /* Project stats grid */
+    .project-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Project actions */
+    .project-actions {
+        flex-direction: column;
+    }
+
+    .project-actions-modal {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* Confirmation actions */
+    .confirmation-actions {
+        flex-direction: column;
+    }
+
+    /* Quick actions bar */
+    .quick-actions-bar {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* Next steps */
+    .next-steps {
+        flex-direction: column;
+        text-align: left;
+    }
+
+    /* Stats cards */
+    .stat-number {
+        font-size: 2rem;
+    }
+
+    .project-stats-summary .stat-number {
+        font-size: 1.5rem;
+    }
+
+    .tiroir-stat-number {
+        font-size: 1.5rem;
+    }
+
+    /* Wizard responsive */
+    .wizard-nav {
+        flex-direction: column;
+        gap: var(--space-sm);
+        width: 100%;
+    }
+
+    .wizard-nav .btn-primary,
+    .wizard-nav .btn-secondary {
+        width: 100%;
+    }
+
+    /* Stat grid mobile */
+    .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ================
+   SMALL MOBILE (480px and down)
+   ================ */
+
+@media (max-width: 480px) {
+
+    /* Single column layouts */
+    .project-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Project container */
+    .projects-container {
+        gap: var(--space-lg);
+    }
+
+    .project-card {
+        padding: var(--space-lg);
+    }
+
+    /* Fiber grid ultra-compact */
+    .fiber-grid-24 {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    .fiber-grid-24 .fiber-port {
+        width: 32px;
+        height: 32px;
+        font-size: 0.7rem;
+    }
+
+    /* Voice control panel */
+    .voice-control-panel {
+        padding: var(--space-lg);
+    }
+
+    .voice-status {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-md);
+    }
+
+    /* Configure header */
+    .configure-header {
+        padding: var(--space-lg);
+    }
+
+    .header-navigation {
+        flex-direction: column;
+        gap: var(--space-md);
+        align-items: center;
+    }
+
+    /* Project title section */
+    .project-title-section h1 {
+        font-size: 1.5rem;
+    }
+
+    /* Modal adjustments */
+    .modal {
+        max-width: 95vw;
+        margin: var(--space-md);
+    }
+
+    .modal-content {
+        padding: var(--space-lg);
+    }
+
+    /* Toast container */
+    .toast-container {
+        top: var(--space-md);
+        right: var(--space-md);
+        left: var(--space-md);
+    }
+
+    .toast {
+        min-width: unset;
+        width: 100%;
+    }
+
+    /* Form elements */
+    .form-input,
+    .form-textarea,
+    .form-select {
+        padding: var(--space-sm);
+    }
+
+    /* Button sizing */
+    .btn-primary,
+    .btn-secondary {
+        padding: var(--space-sm) var(--space-md);
+        font-size: 0.9rem;
+    }
+
+    /* Wizard steps */
+    .wizard-steps {
+        flex-direction: column;
+    }
+
+    .wizard-step {
+        padding: var(--space-md);
+    }
+
+    /* Photo thumbnails */
+    .photo-thumbnail,
+    .add-photo-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    /* Tiroir and module icons */
+    .tiroir-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+    }
+
+    .module-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+}
+
+/* ================
+   LANDSCAPE ORIENTATION (Mobile)
+   ================ */
+
+@media (max-width: 768px) and (orientation: landscape) {
+
+    /* Adjust fiber grid for landscape */
+    .fiber-grid-24 {
+        grid-template-columns: repeat(12, 1fr);
+    }
+
+    .fiber-grid-24 .fiber-port {
+        width: 30px;
+        height: 30px;
+        font-size: 0.7rem;
+    }
+
+    /* Voice control panel landscape */
+    .voice-control-panel {
+        flex-direction: row;
+        padding: var(--space-md) var(--space-lg);
+    }
+
+    /* Header adjustments */
+    .configure-header {
+        padding: var(--space-md) var(--space-lg);
+    }
+}
+
+/* ================
+   HIGH DPI DISPLAYS
+   ================ */
+
+@media (-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
+
+    /* Enhance shadows and borders for retina */
+    .fiber-port {
+        border-width: 1px;
+    }
+
+    .photo-thumbnail {
+        border-width: 1px;
+    }
+
+    .add-photo-btn {
+        border-width: 1px;
+    }
+}
+
+/* ================
+   PRINT STYLES
+   ================ */
+
+@media print {
+
+    /* Hide interactive elements */
+    .voice-control-panel,
+    .module-controls,
+    .quick-actions-bar,
+    .btn-voice-control,
+    .btn-module-action,
+    .add-photo-btn {
+        display: none !important;
+    }
+
+    /* Flatten layout for print */
+    .tiroir-card,
+    .module-card {
+        box-shadow: none;
+        border: 1px solid #000;
+        break-inside: avoid;
+    }
+
+    /* Ensure text is readable */
+    .tiroir-header,
+    .module-header {
+        background: white !important;
+        color: black !important;
+    }
+
+    /* Fiber grid adjustments */
+    .fiber-grid-24 .fiber-port {
+        border: 1px solid #000;
+        color: #000;
+        background: white;
+    }
+
+    .fiber-port.available {
+        background: #e5e7eb !important;
+    }
+
+    .fiber-port.occupied {
+        background: #d1d5db !important;
+    }
+}
+
+/* ================
+   REDUCED MOTION
+   ================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    /* Disable animations for users who prefer reduced motion */
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .voice-indicator.listening {
+        animation: none;
+    }
+
+    .fiber-port.current {
+        animation: none;
+    }
+
+    .loading-spinner {
+        animation: none;
+        border: 4px solid var(--primary-500);
+    }
+}
+
+/* ================
+   TOUCH DEVICE ADJUSTMENTS
+   ================ */
+
+@media (hover: none) and (pointer: coarse) {
+
+    /* Larger touch targets */
+    .fiber-port {
+        width: 50px;
+        height: 50px;
+        font-size: 0.9rem;
+    }
+
+    .btn-voice-control,
+    .btn-module-action {
+        min-height: 48px;
+        padding: var(--space-md) var(--space-lg);
+    }
+
+    .photo-thumbnail,
+    .add-photo-btn {
+        width: 48px;
+        height: 48px;
+    }
+
+    /* Remove hover effects on touch devices */
+    .project-card:hover,
+    .tiroir-card:hover,
+    .module-card:hover {
+        transform: none;
+        box-shadow: var(--shadow-md);
+    }
+
+    .fiber-port:hover {
+        transform: none;
+    }
+}

@@ -17,8 +17,13 @@
 
     <!-- Custom Styles -->
     <link rel="stylesheet" href="css/main.css" />
-    <link rel="stylesheet" href="css/components.css" />
-    <link rel="stylesheet" href="css/animations.css" />
+    <link rel="stylesheet" href="css/components/stats.css" />
+    <link rel="stylesheet" href="css/components/projects.css" />
+    <link rel="stylesheet" href="css/components/wizard.css" />
+    <link rel="stylesheet" href="css/components/modals.css" />
+    <link rel="stylesheet" href="css/components/fiber-config.css" />
+    <link rel="stylesheet" href="css/utils/animations.css" />
+    <link rel="stylesheet" href="css/utils/responsive.css" />
   </head>
   <body>
     <!-- Loading Screen -->
@@ -320,7 +325,7 @@
               <button class="btn-secondary" onclick="window.FiberConfig.setAllOccupied()">
                 <i class="fas fa-times-circle"></i> Set All Occupied
               </button>
-              <button class="btn-primary" onclick="window.FiberConfig.saveProgress()">
+              <button class="btn-primary" onclick="window.FiberConfig.saveTiroirConfig()">
                 <i class="fas fa-save"></i> Save Progress
               </button>
             </div>
@@ -340,15 +345,14 @@
     <!-- Modal Container -->
     <div id="modal-container" class="modal-container"></div>
 
-    <!-- Scripts -->
+    <!-- Scripts - CORRECTED ORDER -->
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/voice.js"></script>
     <script src="js/components.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/projects.js"></script>
-    <script src="js/voice.js"></script>
-    <script src="js/main.js"></script>
     <script src="js/fiber-config.js"></script>
     <script src="js/main.js"></script>
   </body>

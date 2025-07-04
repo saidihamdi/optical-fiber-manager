@@ -493,9 +493,15 @@ window.Projects = {
   },
 
   configureProject(projectId) {
-    console.log(`⚙️ Configuring project: ${projectId}`);
-    // Navigate to fiber configuration page
-    window.Components.showToast("info", "Coming Soon", "Fiber configuration functionality will be available soon");
+    console.log(`⚙️ Opening fiber configuration for project: ${projectId}`);
+
+    // Navigate to configure page and initialize
+    window.Navigation.showPage("configure");
+
+    // Initialize fiber configuration after page is shown
+    setTimeout(() => {
+      window.FiberConfig.init(projectId);
+    }, 100);
   },
 
   async deleteProject(projectId) {

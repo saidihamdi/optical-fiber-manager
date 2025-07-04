@@ -18,6 +18,7 @@ class OpticalFiberServer {
     this.app.use(express.json({ limit: "50mb" }));
     this.app.use(express.urlencoded({ extended: true, limit: "50mb" }));
     this.app.use(express.static(path.join(__dirname, "../public")));
+    this.app.use("/photos", express.static(path.join(__dirname, "../../data/photos")));
 
     // Request logging
     this.app.use((req, res, next) => {
@@ -81,6 +82,16 @@ class OpticalFiberServer {
       console.log("✅ Excel routes loaded successfully");
     } catch (error) {
       console.error("❌ Error loading excel routes:", error.message);
+      console.error("Stack:", error.stack);
+    }
+
+    try {
+      console.log("⏳ Loading photos routes...");
+      const photosRouter = require("./routes/photos");
+      this.app.use("/api/photos", photosRouter);
+      console.log("✅ Photos routes loaded successfully");
+    } catch (error) {
+      console.error("❌ Error loading photos routes:", error.message);
       console.error("Stack:", error.stack);
     }
 
@@ -155,6 +166,7 @@ class OpticalFiberServer {
       path.join(__dirname, "../../data"),
       path.join(__dirname, "../../data/projects"),
       path.join(__dirname, "../../data/uploads"),
+      path.join(__dirname, "../../data/photos"),
       path.join(__dirname, "../public"),
       path.join(__dirname, "../public/js"),
       path.join(__dirname, "../public/css"),

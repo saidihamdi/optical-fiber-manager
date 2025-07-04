@@ -151,6 +151,102 @@ router.get("/:projectId/data", async (req, res) => {
   }
 });
 
+router.get("/:projectId/tiroirs", async (req, res) => {
+  try {
+    const projectId = req.params.projectId;
+    console.log(`📊 Getting simplified tiroirs data for project ID: ${projectId}`);
+
+    // Find project by ID in all project folders
+    const projectFolders = await fs.readdir(PROJECTS_DIR);
+    let foundProject = null;
+
+    for (const folder of projectFolders) {
+      const folderPath = path.join(PROJECTS_DIR, folder);
+      const stat = await fs.stat(folderPath);
+
+      if (stat.isDirectory()) {
+        const jsonFile = path.join(folderPath, `${folder}.json`);
+
+        if (await fs.pathExists(jsonFile)) {
+          const projectData = await fs.readJson(jsonFile);
+          if (projectData.id === projectId) {
+            foundProject = projectData;
+            console.log(`✅ Found project: ${foundProject.name}`);
+            break;
+          }
+        }
+      }
+    }
+
+    if (!foundProject) {
+      console.log(`❌ Project not found with ID: ${projectId}`);
+      return res.status(404).json({
+        success: false,
+        error: "Project not found",
+      });
+    }
+
+    if (!foundProject.rawData || !Array.isArray(foundProject.rawData)) {
+      return res.status(400).json({
+        success: false,
+        error: "No raw data found for this project",
+      });
+    }
+
+    // Build simplified structure from rawData
+    const tiroirMap = new Map();
+
+    // Process each row in rawData
+    foundProject.rawData.forEach((row) => {
+      if (row.tiroir && row.tiroir !== "NOT_SET" && row.module && row.module !== "NOT_SET") {
+        const tiroirId = row.tiroir;
+        const moduleId = row.module;
+
+        // Get or create tiroir
+        if (!tiroirMap.has(tiroirId)) {
+          tiroirMap.set(tiroirId, {
+            id: tiroirId,
+            name: `Tiroir ${tiroirId}`,
+            siteCode: row.cc ? row.cc.split("-")[0] : "Unknown", // Extract B2 from B2-T1-MODULE-A
+            modules: new Set(), // Use Set to avoid duplicates
+          });
+        }
+
+        // Add module to tiroir
+        tiroirMap.get(tiroirId).modules.add(moduleId);
+      }
+    });
+
+    // Convert to array and sort
+    const tiroirArray = Array.from(tiroirMap.values())
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((tiroir) => ({
+        ...tiroir,
+        modules: Array.from(tiroir.modules)
+          .sort()
+          .map((moduleId) => ({
+            id: moduleId,
+            name: `Module ${moduleId}`,
+          })),
+      }));
+
+    const responseData = {
+      success: true,
+      tiroirs: tiroirArray,
+    };
+
+    console.log(`✅ Returning ${tiroirArray.length} tiroirs with simplified structure`);
+    res.json(responseData);
+  } catch (error) {
+    console.error("❌ Error getting simplified tiroirs data:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to get tiroirs data",
+      message: error.message,
+    });
+  }
+});
+
 // Parse Excel data according to specifications
 async function parseExcelData(worksheet) {
   const data = {
@@ -168,6 +264,7 @@ async function parseExcelData(worksheet) {
 
     // Stop when CC column is empty
     if (!ccCell || !ccCell.v) {
+      console.log(`✅ Processing stopped at row ${row} - CC is empty`);
       break;
     }
 
@@ -176,18 +273,32 @@ async function parseExcelData(worksheet) {
     const kCell = worksheet[`K${row}`];
     const mCell = worksheet[`M${row}`];
 
-    if (bpCell && bpCell.v && cdCell && cdCell.v) {
-      const rowData = {
-        row: row,
-        bp: bpCell.v.toString(),
-        cc: ccCell.v.toString(),
-        cd: cdCell.v.toString(),
-        k: kCell ? kCell.v : "",
-        m: mCell ? mCell.v : "",
-      };
+    const rowData = {
+      row: row,
+      bp: bpCell && bpCell.v ? bpCell.v.toString() : "NOT_SET",
+      cc: ccCell.v.toString(),
+      cd: cdCell && cdCell.v ? cdCell.v.toString() : "NOT_SET",
+      k: kCell && kCell.v ? kCell.v : "NOT_SET",
+      m: mCell && mCell.v ? mCell.v : "NOT_SET",
+      tiroir: (() => {
+        const parts = ccCell.v.toString().split("-");
+        return parts.length >= 2 ? parts[1] : "NOT_SET"; // T1
+      })(),
 
-      rawData.push(rowData);
+      module: (() => {
+        const ccValue = ccCell.v.toString();
+        const moduleIndex = ccValue.indexOf("MODULE-");
+        return moduleIndex !== -1 ? ccValue.substring(moduleIndex + 7) : "NOT_SET"; // A
+      })(),
+    };
+
+    rawData.push(rowData);
+
+    // Only process rows that have the essential data (CC and CD)
+    if (rowData.bp !== "NOT_SET" && rowData.cd !== "NOT_SET") {
       processRowData(rowData, data);
+    } else {
+      console.log(`⚠️ Row ${row}: Skipping due to missing BP or CD - BP: ${rowData.bp}, CD: ${rowData.cd}`);
     }
 
     row++;

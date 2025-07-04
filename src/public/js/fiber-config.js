@@ -8,7 +8,7 @@ window.FiberConfig = {
   projectData: null,
   currentFiber: null,
   isVoiceActive: false,
-  voiceRecognition: null,
+  currentModule: null,
 
   // ==================
   // INITIALIZATION
@@ -18,18 +18,10 @@ window.FiberConfig = {
     console.log("🔧 Initializing fiber configuration for project:", projectId);
 
     try {
-      // Load project data
       await this.loadProject(projectId);
-
-      // Render the interface
       this.renderInterface();
-
-      // Setup voice recognition
       this.setupVoiceRecognition();
-
-      // Setup event listeners
       this.setupEventListeners();
-
       console.log("✅ Fiber configuration initialized");
     } catch (error) {
       console.error("❌ Failed to initialize fiber configuration:", error);
@@ -42,12 +34,36 @@ window.FiberConfig = {
     const projectResponse = await window.API.projects.get(projectId);
     this.currentProject = projectResponse.project;
 
-    // Load Excel data
-    const dataResponse = await window.API.excel.getData(projectId);
-    this.projectData = dataResponse.data;
+    // Load simplified tiroirs data from NEW API
+    const tiroirResponse = await window.API.get(`/api/excel/${projectId}/tiroirs`);
+    this.projectData = {
+      tiroirs: {},
+      fibers: {}, // Initialize fibers storage
+    };
+
+    // Convert array to object structure that the existing code expects
+    if (tiroirResponse.tiroirs) {
+      tiroirResponse.tiroirs.forEach((tiroir) => {
+        this.projectData.tiroirs[tiroir.id] = {
+          id: tiroir.id,
+          name: tiroir.name,
+          siteCode: tiroir.siteCode,
+          modules: {},
+        };
+
+        // Add modules to the tiroir
+        tiroir.modules.forEach((module) => {
+          this.projectData.tiroirs[tiroir.id].modules[module.id] = {
+            id: module.id,
+            name: module.name,
+            fibers: {}, // Will be generated on-the-fly as 24 fibers per module
+          };
+        });
+      });
+    }
 
     console.log("📊 Project loaded:", this.currentProject.name);
-    console.log("📊 Data loaded:", this.projectData);
+    console.log("📊 Tiroirs loaded from new API:", Object.keys(this.projectData.tiroirs));
   },
 
   // ==================
@@ -71,10 +87,12 @@ window.FiberConfig = {
     statusBadge.className = `project-status-badge ${this.currentProject.status}`;
 
     // Update stats
-    document.getElementById("configure-total-fibers").textContent = this.currentProject.totalFibers || 0;
-    document.getElementById("configure-configured-fibers").textContent = this.currentProject.configuredFibers || 0;
+    const totalFibers = this.calculateTotalFibers();
+    const configuredFibers = this.getConfiguredFibersCount();
+    const progress = totalFibers > 0 ? Math.round((configuredFibers / totalFibers) * 100) : 0;
 
-    const progress = this.calculateProgress();
+    document.getElementById("configure-total-fibers").textContent = totalFibers;
+    document.getElementById("configure-configured-fibers").textContent = configuredFibers;
     document.getElementById("configure-progress").textContent = `${progress}%`;
   },
 
@@ -83,20 +101,19 @@ window.FiberConfig = {
 
     if (!this.projectData.tiroirs || Object.keys(this.projectData.tiroirs).length === 0) {
       container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <h3>No Configuration Data</h3>
-                    <p>Project data is not available. Please ensure the Excel file was processed correctly.</p>
-                    <button class="btn-secondary" onclick="window.Navigation.showPage('projects')">
-                        <i class="fas fa-arrow-left"></i> Back to Projects
-                    </button>
-                </div>
-            `;
+        <div class="empty-state">
+          <i class="fas fa-exclamation-triangle"></i>
+          <h3>No Configuration Data</h3>
+          <p>Project data is not available. Please ensure the Excel file was processed correctly.</p>
+          <button class="btn-secondary" onclick="window.Navigation.showPage('projects')">
+            <i class="fas fa-arrow-left"></i> Back to Projects
+          </button>
+        </div>
+      `;
       return;
     }
 
     const tiroirKeys = Object.keys(this.projectData.tiroirs).sort();
-
     container.innerHTML = tiroirKeys
       .map((tiroirId) => {
         const tiroir = this.projectData.tiroirs[tiroirId];
@@ -106,127 +123,355 @@ window.FiberConfig = {
   },
 
   renderTiroir(tiroirId, tiroir) {
-    const tiroirStats = this.calculateTiroirStats(tiroir);
+    const tiroirStats = this.calculateTiroirStats(tiroirId);
+    const photos = this.getTiroirPhotos(tiroirId);
 
     return `
-            <div class="tiroir-section" id="tiroir-${tiroirId}">
-                <div class="tiroir-header">
-                    <div class="tiroir-title">
-                        <div class="tiroir-icon">
-                            <i class="fas fa-server"></i>
-                        </div>
-                        <div>
-                            <h2>Tiroir ${tiroirId}</h2>
-                            <p class="tiroir-description">${tiroir.siteCode} - ${tiroirStats.totalFibers} fibers</p>
-                        </div>
-                    </div>
-                    
-                    <div class="tiroir-stats">
-                        <div class="tiroir-stat">
-                            <div class="tiroir-stat-number">${tiroirStats.totalFibers}</div>
-                            <div class="tiroir-stat-label">Total</div>
-                        </div>
-                        <div class="tiroir-stat">
-                            <div class="tiroir-stat-number">${tiroirStats.configuredFibers}</div>
-                            <div class="tiroir-stat-label">Configured</div>
-                        </div>
-                        <div class="tiroir-stat">
-                            <div class="tiroir-stat-number">${tiroirStats.progress}%</div>
-                            <div class="tiroir-stat-label">Progress</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="modules-grid">
-                    ${this.renderModules(tiroir)}
-                </div>
+      <div class="tiroir-card" id="tiroir-${tiroirId}">
+        <div class="tiroir-header" onclick="window.FiberConfig.toggleTiroir('${tiroirId}')">
+          <div class="tiroir-title">
+            <div class="tiroir-icon">
+              <i class="fas fa-server"></i>
             </div>
-        `;
+            <div class="tiroir-info">
+              <h2>Tiroir ${tiroirId}</h2>
+              <p class="tiroir-description">${tiroir.siteCode} - ${tiroirStats.totalFibers} fibers</p>
+            </div>
+          </div>
+          
+          <div class="tiroir-photos">
+            ${photos
+              .map(
+                (photo) => `
+              <div class="photo-thumbnail" onclick="event.stopPropagation(); window.FiberConfig.viewPhoto('${photo}', '${tiroirId}')">
+                <img src="/photos/${this.currentProject.name}/tiroir-${tiroirId}/${photo}" alt="Photo">
+              </div>
+            `
+              )
+              .join("")}
+            <button class="add-photo-btn" onclick="event.stopPropagation(); window.FiberConfig.addPhoto('${tiroirId}')" title="Ajouter photo">
+              <i class="fas fa-camera-plus"></i>
+            </button>
+          </div>
+          
+          <div class="tiroir-stats">
+            <div class="tiroir-stat">
+              <div class="tiroir-stat-number">${tiroirStats.totalFibers}</div>
+              <div class="tiroir-stat-label">Total</div>
+            </div>
+            <div class="tiroir-stat">
+              <div class="tiroir-stat-number">${tiroirStats.configuredFibers}</div>
+              <div class="tiroir-stat-label">Configured</div>
+            </div>
+            <div class="tiroir-stat">
+              <div class="tiroir-stat-number">${tiroirStats.progress}%</div>
+              <div class="tiroir-stat-label">Progress</div>
+            </div>
+          </div>
+          
+          <div class="expand-arrow">
+            <i class="fas fa-chevron-down"></i>
+          </div>
+        </div>
+        
+        <div class="tiroir-content" id="tiroir-content-${tiroirId}" style="display: none;">
+          ${this.renderModules(tiroir, tiroirId)}
+        </div>
+      </div>
+    `;
   },
 
-  renderModules(tiroir) {
-    const modules = {};
+  getTiroirPhotos(tiroirId) {
+    if (!this.currentProject.tiroir_cfg) return [];
+    if (!this.currentProject.tiroir_cfg[tiroirId]) return [];
+    return this.currentProject.tiroir_cfg[tiroirId].photos || [];
+  },
 
-    // Convert Sets to arrays before iteration
-    const pboArray = Array.from(tiroir.pbos || []);
-    const pbiArray = Array.from(tiroir.pbis || []);
+  addPhoto(tiroirId) {
+    console.log(`📸 Adding photo to Tiroir ${tiroirId}`);
 
-    [...pboArray, ...pbiArray].forEach((endpointId) => {
-      const endpoint = this.projectData.pbos[endpointId] || this.projectData.pbis[endpointId];
-      if (endpoint) {
-        const moduleId = endpoint.module;
-        if (!modules[moduleId]) {
-          modules[moduleId] = {
-            id: moduleId,
-            endpoints: [],
-          };
+    // Create file input
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.multiple = true;
+
+    input.onchange = async (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+
+      try {
+        for (const file of files) {
+          await this.uploadPhoto(tiroirId, file);
         }
-        modules[moduleId].endpoints.push(endpoint);
+
+        // Refresh tiroir display
+        this.renderInterface();
+        window.Components.showToast(
+          "success",
+          "Photos ajoutées",
+          `${files.length} photo(s) ajoutée(s) au Tiroir ${tiroirId}`
+        );
+      } catch (error) {
+        console.error("Error uploading photos:", error);
+        window.Components.showToast("error", "Erreur", "Échec de l'upload des photos");
       }
+    };
+
+    input.click();
+  },
+
+  async uploadPhoto(tiroirId, file) {
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append("photo", file);
+    formData.append("tiroirId", tiroirId);
+
+    // Upload to backend
+    const response = await fetch(`/api/photos/${this.currentProject.id}`, {
+      method: "POST",
+      body: formData,
     });
 
-    return Object.keys(modules)
-      .sort()
-      .map((moduleId) => {
-        return this.renderModule(moduleId, modules[moduleId]);
-      })
-      .join("");
+    if (!response.ok) {
+      throw new Error("Upload failed");
+    }
+
+    const result = await response.json();
+
+    // Update local project data
+    if (!this.currentProject.tiroir_cfg) {
+      this.currentProject.tiroir_cfg = {};
+    }
+    if (!this.currentProject.tiroir_cfg[tiroirId]) {
+      this.currentProject.tiroir_cfg[tiroirId] = { photos: [], modules: {} };
+    }
+    if (!this.currentProject.tiroir_cfg[tiroirId].photos) {
+      this.currentProject.tiroir_cfg[tiroirId].photos = [];
+    }
+
+    this.currentProject.tiroir_cfg[tiroirId].photos.push(result.filename);
   },
 
-  renderModule(moduleId, module) {
-    return `
-            <div class="module-section" id="module-${moduleId}">
-                <div class="module-header">
-                    <div class="module-title">
-                        <h3>Module ${moduleId}</h3>
-                        <span class="module-type ${module.endpoints[0]?.type?.toLowerCase() || "pbo"}">${
-      module.endpoints[0]?.type || "PBO"
-    }</span>
-                    </div>
-                </div>
-                
-                ${module.endpoints.map((endpoint) => this.renderEndpoint(endpoint)).join("")}
-            </div>
-        `;
+  viewPhoto(photoName, tiroirId) {
+    // ADD tiroirId parameter
+    const imageUrl = `/photos/${this.currentProject.name}/tiroir-${tiroirId}/${photoName}`;
+
+    const modalContent = `
+      <div class="photo-viewer">
+        <img src="${imageUrl}" alt="Tiroir Photo" style="max-width: 100%; max-height: 80vh;">
+        <div class="photo-actions">
+          <button class="btn-secondary" onclick="window.Components.closeModal()">
+            <i class="fas fa-times"></i> Fermer
+          </button>
+          <button class="btn-danger" onclick="window.FiberConfig.deletePhoto('${photoName}', '${tiroirId}')">
+            <i class="fas fa-trash"></i> Supprimer
+          </button>
+        </div>
+      </div>
+    `;
+
+    window.Components.showModal("Photo Tiroir", modalContent, { width: "80%" });
   },
 
-  renderEndpoint(endpoint) {
-    const fibers = Object.values(endpoint.fibers || {}).sort((a, b) => a.fiberNumber - b.fiberNumber);
+  async deletePhoto(photoName) {
+    // Implementation for photo deletion
+    console.log(`🗑️ Deleting photo: ${photoName}`);
+  },
+
+  renderModules(tiroir, tiroirId) {
+    const modules = tiroir.modules || {};
 
     return `
-            <div class="endpoint-section" id="endpoint-${endpoint.id}">
-                <div class="endpoint-header">
-                    <h4>${endpoint.type} ${endpoint.id}</h4>
-                    <div class="distance-control">
-                        <label>Distance:</label>
-                        <input type="number" class="distance-input" value="${endpoint.distance || ""}" 
-                               placeholder="meters" onchange="window.FiberConfig.updateDistance('${
-                                 endpoint.id
-                               }', this.value)">
-                        <span>m</span>
+      <div class="modules-container">
+        ${Object.keys(modules)
+          .sort()
+          .map((moduleId) => {
+            const module = modules[moduleId];
+
+            // Always create 24 fibers (1-24)
+            const allFibers = [];
+            for (let i = 1; i <= 24; i++) {
+              allFibers.push({
+                id: `${tiroirId}-${moduleId}-${i}`,
+                fiberNumber: i,
+                tiroir: tiroirId,
+                module: moduleId,
+                newStatus: "not-configured",
+              });
+            }
+
+            const occupiedCount = this.getFiberCountByStatus(tiroirId, moduleId, "occupied");
+            const availableCount = this.getFiberCountByStatus(tiroirId, moduleId, "available");
+            const notConfiguredCount = this.getFiberCountByStatus(tiroirId, moduleId, "not-configured");
+
+            return `
+              <div class="module-card" id="module-${tiroirId}-${moduleId}">
+                <div class="module-header" onclick="window.FiberConfig.toggleModule('${tiroirId}', '${moduleId}')">
+                  <div class="module-title">
+                    <div class="module-icon">
+                      <i class="fas fa-th-large"></i>
                     </div>
+                    <div class="module-info">
+                      <h3>Module ${moduleId}</h3>
+                      <p class="module-description">24 fibers</p>
+                    </div>
+                  </div>
+                  
+                  <div class="module-stats">
+                    <div class="module-stat">
+                      <span class="stat-number" style="color: #ef4444;">${occupiedCount}</span>
+                      <span class="stat-label">Occupée</span>
+                    </div>
+                    <div class="module-stat">
+                      <span class="stat-number" style="color: #22c55e;">${availableCount}</span>
+                      <span class="stat-label">Libre</span>
+                    </div>
+                    <div class="module-stat">
+                      <span class="stat-number" style="color: #6b7280;">${notConfiguredCount}</span>
+                      <span class="stat-label">A Configurer</span>
+                    </div>
+                  </div>
+                  
+                  <div class="expand-arrow">
+                    <i class="fas fa-chevron-down"></i>
+                  </div>
                 </div>
                 
-                <div class="fiber-grid">
-                    ${fibers.map((fiber) => this.renderFiber(fiber)).join("")}
+                <div class="module-content" id="module-content-${tiroirId}-${moduleId}" style="display: none;">
+                  <div class="module-workspace">
+                    <div class="fiber-grid-container">
+                      <div class="fiber-grid-24">
+                        ${allFibers.map((fiber) => this.renderFiber(fiber)).join("")}
+                      </div>
+                    </div>
+                    
+                    <div class="module-controls">
+                      <div class="voice-controls">
+                        <button class="btn-voice-control start" onclick="window.FiberConfig.startModuleVoice('${tiroirId}', '${moduleId}')">
+                          <i class="fas fa-microphone"></i>
+                          Start Voice
+                        </button>
+                        <button class="btn-voice-control stop" onclick="window.FiberConfig.stopModuleVoice('${tiroirId}', '${moduleId}')" style="display: none;">
+                          <i class="fas fa-microphone-slash"></i>
+                          Stop Voice
+                        </button>
+                        <button class="btn-voice-control pause" onclick="window.FiberConfig.pauseModuleVoice('${tiroirId}', '${moduleId}')" style="display: none;">
+                          <i class="fas fa-pause"></i>
+                          Pause
+                        </button>
+                      </div>
+                      
+                      <div class="module-actions">
+                        <button class="btn-module-action clear" onclick="window.FiberConfig.clearModule('${tiroirId}', '${moduleId}')">
+                          <i class="fas fa-eraser"></i>
+                          Clear All
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-            </div>
-        `;
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    `;
   },
 
   renderFiber(fiber) {
-    const statusClass = fiber.newStatus || "not-configured";
+    const storedFiber = this.findFiberById(fiber.id);
+    const statusClass = storedFiber ? storedFiber.newStatus : "not-configured";
     const currentClass = this.currentFiber && this.currentFiber.id === fiber.id ? "current" : "";
 
     return `
-            <div class="fiber-port ${statusClass} ${currentClass}" 
-                 id="fiber-${fiber.id}" 
-                 data-fiber-id="${fiber.id}"
-                 onclick="window.FiberConfig.selectFiber('${fiber.id}')"
-                 title="Fiber ${fiber.fiberNumber} - ${this.getStatusLabel(statusClass)}">
-                ${fiber.fiberNumber}
-            </div>
-        `;
+      <div class="fiber-port ${statusClass} ${currentClass}" 
+           id="fiber-${fiber.id}" 
+           data-fiber-id="${fiber.id}"
+           onclick="window.FiberConfig.cycleFiberStatus('${fiber.id}')"
+           title="Fiber ${fiber.fiberNumber} - ${this.getStatusLabel(statusClass)}">
+        ${fiber.fiberNumber}
+      </div>
+    `;
+  },
+
+  // ==================
+  // FIBER MANAGEMENT
+  // ==================
+
+  cycleFiberStatus(fiberId) {
+    const fiber = this.findFiberById(fiberId);
+    if (!fiber) return;
+
+    const currentStatus = fiber.newStatus || "not-configured";
+    let newStatus;
+
+    // Cycle: not-configured → available → occupied → not-configured
+    switch (currentStatus) {
+      case "not-configured":
+        newStatus = "available";
+        break;
+      case "available":
+        newStatus = "occupied";
+        break;
+      case "occupied":
+        newStatus = "not-configured";
+        break;
+      default:
+        newStatus = "not-configured";
+    }
+
+    // Update fiber status
+    fiber.newStatus = newStatus;
+
+    // Update UI
+    const element = document.getElementById(`fiber-${fiberId}`);
+    if (element) {
+      element.classList.remove("not-configured", "available", "occupied");
+      element.classList.add(newStatus);
+      element.title = `Fiber ${fiber.fiberNumber} - ${this.getStatusLabel(newStatus)}`;
+    }
+
+    // Update counters
+    this.updateProgress();
+
+    const parts = fiberId.split("-");
+    if (parts.length >= 3) {
+      const tiroirId = parts[0];
+      const moduleId = parts[1];
+      this.updateModuleStats(tiroirId, moduleId);
+      this.updateTiroirStats(tiroirId);
+    }
+
+    console.log(`🔄 Fiber ${fiber.fiberNumber} status changed to: ${newStatus}`);
+  },
+
+  findFiberById(fiberId) {
+    // Check if fiber already exists
+    if (this.projectData.fibers[fiberId]) {
+      return this.projectData.fibers[fiberId];
+    }
+
+    // Create new fiber if not found
+    const parts = fiberId.split("-");
+    if (parts.length >= 3) {
+      const tiroirId = parts[0];
+      const moduleId = parts[1];
+      const fiberNumber = parseInt(parts[2]);
+
+      const fiber = {
+        id: fiberId,
+        fiberNumber: fiberNumber,
+        tiroir: tiroirId,
+        module: moduleId,
+        newStatus: "not-configured",
+      };
+
+      this.projectData.fibers[fiberId] = fiber;
+      return fiber;
+    }
+
+    return null;
   },
 
   // ==================
@@ -239,7 +484,6 @@ window.FiberConfig = {
       return;
     }
 
-    // Setup voice recognition for fiber configuration
     if (window.Voice.recognition) {
       window.Voice.recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript.toLowerCase().trim();
@@ -261,13 +505,58 @@ window.FiberConfig = {
 
       window.Voice.recognition.onend = () => {
         if (this.isVoiceActive) {
-          // Restart if we're still in voice mode
           setTimeout(() => {
             window.Voice.recognition.start();
           }, 100);
         }
       };
     }
+  },
+
+  startModuleVoice(tiroirId, moduleId) {
+    console.log(`🎤 Starting voice recognition for Tiroir ${tiroirId}, Module ${moduleId}`);
+
+    // Find first unconfigured fiber in this module
+    const moduleElement = document.getElementById(`module-content-${tiroirId}-${moduleId}`);
+    const fibers = moduleElement.querySelectorAll(".fiber-port");
+
+    let firstUnconfigured = null;
+    for (const fiberElement of fibers) {
+      if (fiberElement.classList.contains("not-configured")) {
+        firstUnconfigured = fiberElement.getAttribute("data-fiber-id");
+        break;
+      }
+    }
+
+    if (firstUnconfigured) {
+      this.selectFiber(firstUnconfigured);
+    }
+
+    // Update button visibility
+    document.querySelector(`#module-${tiroirId}-${moduleId} .btn-voice-control.start`).style.display = "none";
+    document.querySelector(`#module-${tiroirId}-${moduleId} .btn-voice-control.stop`).style.display = "inline-flex";
+    document.querySelector(`#module-${tiroirId}-${moduleId} .btn-voice-control.pause`).style.display = "inline-flex";
+
+    // Start voice recognition
+    this.startVoiceRecognition();
+    this.currentModule = { tiroirId, moduleId };
+  },
+
+  stopModuleVoice(tiroirId, moduleId) {
+    console.log(`🎤 Stopping voice recognition for Tiroir ${tiroirId}, Module ${moduleId}`);
+
+    // Update button visibility
+    document.querySelector(`#module-${tiroirId}-${moduleId} .btn-voice-control.start`).style.display = "inline-flex";
+    document.querySelector(`#module-${tiroirId}-${moduleId} .btn-voice-control.stop`).style.display = "none";
+    document.querySelector(`#module-${tiroirId}-${moduleId} .btn-voice-control.pause`).style.display = "none";
+
+    this.stopVoiceRecognition();
+    this.currentModule = null;
+  },
+
+  pauseModuleVoice(tiroirId, moduleId) {
+    console.log(`⏸️ Pausing voice recognition for Tiroir ${tiroirId}, Module ${moduleId}`);
+    this.stopVoiceRecognition();
   },
 
   startVoiceRecognition() {
@@ -278,30 +567,13 @@ window.FiberConfig = {
 
     this.isVoiceActive = true;
     window.Voice.start();
-
-    // Update UI
-    document.getElementById("voice-indicator").classList.add("listening");
-    document.getElementById("voice-status-text").textContent = "Listening for commands...";
-    document.getElementById("start-voice-btn").style.display = "none";
-    document.getElementById("stop-voice-btn").style.display = "flex";
-
     window.Components.showToast("info", "Voice Active", "Say 'disponible' or 'occupé' to configure fibers");
   },
 
   stopVoiceRecognition() {
     this.isVoiceActive = false;
     window.Voice.stop();
-
-    // Update UI
-    document.getElementById("voice-indicator").classList.remove("listening");
-    document.getElementById("voice-status-text").textContent = "Voice Recognition Ready";
-    document.getElementById("start-voice-btn").style.display = "flex";
-    document.getElementById("stop-voice-btn").style.display = "none";
   },
-
-  // ==================
-  // FIBER MANAGEMENT
-  // ==================
 
   selectFiber(fiberId) {
     // Remove current class from previous fiber
@@ -312,22 +584,13 @@ window.FiberConfig = {
       }
     }
 
-    // Find and set new current fiber
+    // Set new current fiber
     this.currentFiber = this.findFiberById(fiberId);
     if (this.currentFiber) {
       const element = document.getElementById(`fiber-${fiberId}`);
       if (element) {
         element.classList.add("current");
         element.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-
-      console.log("🔍 Selected fiber:", this.currentFiber.fiberNumber);
-
-      // Update voice status
-      if (this.isVoiceActive) {
-        document.getElementById(
-          "voice-status-text"
-        ).textContent = `Ready for Fiber ${this.currentFiber.fiberNumber} - Say "disponible" or "occupé"`;
       }
     }
   },
@@ -339,184 +602,292 @@ window.FiberConfig = {
     const element = document.getElementById(`fiber-${fiberId}`);
 
     if (element) {
-      // Remove old status classes
       element.classList.remove("not-configured", "available", "occupied");
-      // Add new status class
       element.classList.add(status);
-
-      // Update fiber data
       this.currentFiber.newStatus = status;
-
-      // Update title
       element.title = `Fiber ${this.currentFiber.fiberNumber} - ${this.getStatusLabel(status)}`;
-
-      console.log(`✅ Fiber ${this.currentFiber.fiberNumber} set to ${status}`);
-
-      // Show feedback
-      window.Components.showToast(
-        "success",
-        "Status Updated",
-        `Fiber ${this.currentFiber.fiberNumber} set to ${this.getStatusLabel(status)}`
-      );
     }
 
-    // Update progress counters
     this.updateProgress();
   },
 
   moveToNextFiber() {
-    if (!this.currentFiber) return;
+    if (!this.currentFiber || !this.currentModule) return;
 
-    const allFibers = this.getAllFibers();
-    const currentIndex = allFibers.findIndex((f) => f.id === this.currentFiber.id);
+    const { tiroirId, moduleId } = this.currentModule;
+    const moduleElement = document.getElementById(`module-content-${tiroirId}-${moduleId}`);
+    const fiberElements = Array.from(moduleElement.querySelectorAll(".fiber-port"));
 
-    if (currentIndex >= 0 && currentIndex < allFibers.length - 1) {
-      const nextFiber = allFibers[currentIndex + 1];
-      this.selectFiber(nextFiber.id);
+    const currentIndex = fiberElements.findIndex((el) => el.getAttribute("data-fiber-id") === this.currentFiber.id);
+
+    if (currentIndex >= 0 && currentIndex < fiberElements.length - 1) {
+      const nextFiberId = fiberElements[currentIndex + 1].getAttribute("data-fiber-id");
+      this.selectFiber(nextFiberId);
     } else {
-      // End of fibers
-      window.Components.showToast("info", "Complete", "All fibers processed!");
-      this.stopVoiceRecognition();
-    }
-  },
-
-  updateDistance(endpointId, distance) {
-    console.log(`📏 Setting distance for ${endpointId}: ${distance}m`);
-
-    // Find endpoint in data
-    const endpoint = this.projectData.pbos[endpointId] || this.projectData.pbis[endpointId];
-    if (endpoint) {
-      endpoint.distance = distance;
-      window.Components.showToast(
-        "success",
-        "Distance Updated",
-        `${endpoint.type} ${endpoint.id} distance set to ${distance}m`
-      );
+      window.Components.showToast("info", "Module Complete", `All fibers in Module ${moduleId} processed!`);
+      this.stopModuleVoice(tiroirId, moduleId);
     }
   },
 
   // ==================
-  // BULK ACTIONS
+  // MODULE ACTIONS
   // ==================
 
-  async resetAll() {
-    const confirmed = await this.showConfirmation(
-      "Reset All Fibers",
-      "Are you sure you want to reset all fiber statuses to not configured?"
-    );
+  clearModule(tiroirId, moduleId) {
+    console.log(`🧹 Clearing all fibers in Tiroir ${tiroirId}, Module ${moduleId}`);
 
-    if (confirmed) {
-      const allFibers = this.getAllFibers();
-      allFibers.forEach((fiber) => {
+    const moduleElement = document.getElementById(`module-content-${tiroirId}-${moduleId}`);
+    const fiberElements = moduleElement.querySelectorAll(".fiber-port");
+
+    fiberElements.forEach((element) => {
+      const fiberId = element.getAttribute("data-fiber-id");
+      const fiber = this.findFiberById(fiberId);
+
+      if (fiber) {
         fiber.newStatus = "not-configured";
-        const element = document.getElementById(`fiber-${fiber.id}`);
-        if (element) {
-          element.className = "fiber-port not-configured";
-          element.title = `Fiber ${fiber.fiberNumber} - Not Configured`;
+        element.classList.remove("available", "occupied");
+        element.classList.add("not-configured");
+        element.title = `Fiber ${fiber.fiberNumber} - Not Configured`;
+      }
+    });
+
+    this.updateProgress();
+    this.updateModuleStats(tiroirId, moduleId);
+    this.updateTiroirStats(tiroirId);
+
+    window.Components.showToast(
+      "success",
+      "Module Cleared",
+      `All fibers in Module ${moduleId} reset to not configured`
+    );
+  },
+
+  // ==================
+  // ALL TIROIR ACTIONS
+  // ==================
+  async resetAll() {
+    // Create all fibers first
+    this.createAllFibers();
+
+    Object.values(this.projectData.fibers).forEach((fiber) => {
+      fiber.newStatus = "not-configured";
+      const element = document.getElementById(`fiber-${fiber.id}`);
+      if (element) {
+        element.classList.remove("available", "occupied");
+        element.classList.add("not-configured");
+      }
+    });
+    this.updateAllStats();
+  },
+
+  createAllFibers() {
+    Object.keys(this.projectData.tiroirs).forEach((tiroirId) => {
+      Object.keys(this.projectData.tiroirs[tiroirId].modules).forEach((moduleId) => {
+        for (let i = 1; i <= 24; i++) {
+          const fiberId = `${tiroirId}-${moduleId}-${i}`;
+          this.findFiberById(fiberId); // This creates the fiber if it doesn't exist
         }
       });
-
-      this.updateProgress();
-      window.Components.showToast("success", "Reset Complete", "All fibers reset to not configured");
-    }
+    });
   },
 
   async setAllAvailable() {
-    const confirmed = await this.showConfirmation(
-      "Set All Available",
-      "Are you sure you want to set all fibers to available?"
-    );
-
-    if (confirmed) {
-      const allFibers = this.getAllFibers();
-      allFibers.forEach((fiber) => {
-        fiber.newStatus = "available";
-        const element = document.getElementById(`fiber-${fiber.id}`);
-        if (element) {
-          element.className = "fiber-port available";
-          element.title = `Fiber ${fiber.fiberNumber} - Available`;
-        }
-      });
-
-      this.updateProgress();
-      window.Components.showToast("success", "Update Complete", "All fibers set to available");
-    }
+    Object.values(this.projectData.fibers).forEach((fiber) => {
+      fiber.newStatus = "available";
+      const element = document.getElementById(`fiber-${fiber.id}`);
+      if (element) {
+        element.classList.remove("not-configured", "occupied");
+        element.classList.add("available");
+      }
+    });
+    this.updateAllStats();
   },
 
   async setAllOccupied() {
-    const confirmed = await this.showConfirmation(
-      "Set All Occupied",
-      "Are you sure you want to set all fibers to occupied?"
-    );
+    Object.values(this.projectData.fibers).forEach((fiber) => {
+      fiber.newStatus = "occupied";
+      const element = document.getElementById(`fiber-${fiber.id}`);
+      if (element) {
+        element.classList.remove("not-configured", "available");
+        element.classList.add("occupied");
+      }
+    });
+    this.updateAllStats();
+  },
 
-    if (confirmed) {
-      const allFibers = this.getAllFibers();
-      allFibers.forEach((fiber) => {
-        fiber.newStatus = "occupied";
-        const element = document.getElementById(`fiber-${fiber.id}`);
-        if (element) {
-          element.className = "fiber-port occupied";
-          element.title = `Fiber ${fiber.fiberNumber} - Occupied`;
-        }
+  updateAllStats() {
+    this.updateProgress();
+    Object.keys(this.projectData.tiroirs).forEach((tiroirId) => {
+      this.updateTiroirStats(tiroirId);
+      Object.keys(this.projectData.tiroirs[tiroirId].modules).forEach((moduleId) => {
+        this.updateModuleStats(tiroirId, moduleId);
       });
+    });
+  },
 
-      this.updateProgress();
-      window.Components.showToast("success", "Update Complete", "All fibers set to occupied");
+  // ==================
+  // UI TOGGLES
+  // ==================
+
+  toggleTiroir(tiroirId) {
+    const content = document.getElementById(`tiroir-content-${tiroirId}`);
+    const arrow = document.querySelector(`#tiroir-${tiroirId} .expand-arrow i`);
+
+    if (content.style.display === "none") {
+      content.style.display = "block";
+      arrow.classList.remove("fa-chevron-down");
+      arrow.classList.add("fa-chevron-up");
+
+      content.style.maxHeight = "0";
+      content.style.overflow = "hidden";
+      content.style.transition = "max-height 0.3s ease-out";
+
+      setTimeout(() => {
+        content.style.maxHeight = content.scrollHeight + "px";
+      }, 10);
+
+      setTimeout(() => {
+        content.style.maxHeight = "none";
+        content.style.overflow = "visible";
+      }, 300);
+    } else {
+      content.style.maxHeight = content.scrollHeight + "px";
+      content.style.overflow = "hidden";
+      content.style.transition = "max-height 0.3s ease-out";
+
+      setTimeout(() => {
+        content.style.maxHeight = "0";
+      }, 10);
+
+      setTimeout(() => {
+        content.style.display = "none";
+        arrow.classList.remove("fa-chevron-up");
+        arrow.classList.add("fa-chevron-down");
+      }, 300);
     }
   },
 
-  async saveProgress() {
-    try {
-      console.log("💾 Saving fiber configuration progress...");
+  toggleModule(tiroirId, moduleId) {
+    const content = document.getElementById(`module-content-${tiroirId}-${moduleId}`);
+    const arrow = document.querySelector(`#module-${tiroirId}-${moduleId} .expand-arrow i`);
 
-      // Collect all fiber statuses and distances
-      const updates = {
-        fibers: {},
-        distances: {},
-      };
+    if (content.style.display === "none") {
+      content.style.display = "block";
+      arrow.classList.remove("fa-chevron-down");
+      arrow.classList.add("fa-chevron-up");
 
-      // Collect fiber statuses
-      const allFibers = this.getAllFibers();
-      allFibers.forEach((fiber) => {
-        if (fiber.newStatus && fiber.newStatus !== "not-configured") {
-          updates.fibers[fiber.id] = fiber.newStatus;
-        }
-      });
+      content.style.maxHeight = "0";
+      content.style.overflow = "hidden";
+      content.style.transition = "max-height 0.3s ease-out";
 
-      // Collect distances
-      Object.values(this.projectData.pbos || {}).forEach((pbo) => {
-        if (pbo.distance) {
-          updates.distances[pbo.id] = pbo.distance;
-        }
-      });
-      Object.values(this.projectData.pbis || {}).forEach((pbi) => {
-        if (pbi.distance) {
-          updates.distances[pbi.id] = pbi.distance;
-        }
-      });
+      setTimeout(() => {
+        content.style.maxHeight = content.scrollHeight + "px";
+      }, 10);
 
-      // Update project status
-      const configuredCount = Object.keys(updates.fibers).length;
-      const progressPercentage = Math.round((configuredCount / allFibers.length) * 100);
+      setTimeout(() => {
+        content.style.maxHeight = "none";
+        content.style.overflow = "visible";
+      }, 300);
+    } else {
+      content.style.maxHeight = content.scrollHeight + "px";
+      content.style.overflow = "hidden";
+      content.style.transition = "max-height 0.3s ease-out";
 
-      await window.API.projects.update(this.currentProject.id, {
-        configuredFibers: configuredCount,
-        status: progressPercentage > 0 ? "in-progress" : "excel-processed",
-        fiberConfiguration: updates,
-        updatedAt: new Date().toISOString(),
-      });
+      setTimeout(() => {
+        content.style.maxHeight = "0";
+      }, 10);
 
-      window.Components.showToast(
-        "success",
-        "Progress Saved",
-        `${configuredCount} fiber configurations saved successfully`
-      );
-
-      console.log("✅ Progress saved successfully");
-    } catch (error) {
-      console.error("❌ Error saving progress:", error);
-      window.Components.showToast("error", "Save Failed", "Failed to save configuration progress");
+      setTimeout(() => {
+        content.style.display = "none";
+        arrow.classList.remove("fa-chevron-up");
+        arrow.classList.add("fa-chevron-down");
+      }, 300);
     }
+  },
+
+  // ==================
+  // STATISTICS & UPDATES
+  // ==================
+
+  updateProgress() {
+    const totalFibers = this.calculateTotalFibers();
+    const configuredFibers = this.getConfiguredFibersCount();
+    const progress = totalFibers > 0 ? Math.round((configuredFibers / totalFibers) * 100) : 0;
+
+    document.getElementById("configure-total-fibers").textContent = totalFibers;
+    document.getElementById("configure-configured-fibers").textContent = configuredFibers;
+    document.getElementById("configure-progress").textContent = `${progress}%`;
+  },
+
+  updateModuleStats(tiroirId, moduleId) {
+    const occupiedCount = this.getFiberCountByStatus(tiroirId, moduleId, "occupied");
+    const availableCount = this.getFiberCountByStatus(tiroirId, moduleId, "available");
+    const notConfiguredCount = this.getFiberCountByStatus(tiroirId, moduleId, "not-configured");
+
+    const statsElements = document.querySelectorAll(`#module-${tiroirId}-${moduleId} .module-stat .stat-number`);
+    if (statsElements.length >= 3) {
+      statsElements[0].textContent = occupiedCount;
+      statsElements[1].textContent = availableCount;
+      statsElements[2].textContent = notConfiguredCount;
+    }
+  },
+
+  updateTiroirStats(tiroirId) {
+    const stats = this.calculateTiroirStats(tiroirId);
+    const statElements = document.querySelectorAll(`#tiroir-${tiroirId} .tiroir-stat-number`);
+
+    if (statElements.length >= 3) {
+      statElements[0].textContent = stats.totalFibers;
+      statElements[1].textContent = stats.configuredFibers;
+      statElements[2].textContent = `${stats.progress}%`;
+    }
+  },
+
+  // ==================
+  // CALCULATION HELPERS
+  // ==================
+
+  calculateTotalFibers() {
+    let total = 0;
+    Object.values(this.projectData.tiroirs).forEach((tiroir) => {
+      total += Object.keys(tiroir.modules).length * 24; // 24 fibers per module
+    });
+    return total;
+  },
+
+  getConfiguredFibersCount() {
+    return Object.values(this.projectData.fibers).filter((fiber) => fiber.newStatus !== "not-configured").length;
+  },
+
+  getFiberCountByStatus(tiroirId, moduleId, status) {
+    let count = 0;
+    for (let i = 1; i <= 24; i++) {
+      const fiberId = `${tiroirId}-${moduleId}-${i}`;
+      const fiber = this.projectData.fibers[fiberId];
+      const fiberStatus = fiber ? fiber.newStatus : "not-configured";
+      if (fiberStatus === status) count++;
+    }
+    return count;
+  },
+
+  calculateTiroirStats(tiroirId) {
+    const tiroir = this.projectData.tiroirs[tiroirId];
+    const totalModules = Object.keys(tiroir.modules).length;
+    const totalFibers = totalModules * 24;
+
+    let configuredFibers = 0;
+    Object.keys(tiroir.modules).forEach((moduleId) => {
+      configuredFibers += this.getFiberCountByStatus(tiroirId, moduleId, "occupied");
+      configuredFibers += this.getFiberCountByStatus(tiroirId, moduleId, "available");
+    });
+
+    const progress = totalFibers > 0 ? Math.round((configuredFibers / totalFibers) * 100) : 0;
+
+    return {
+      totalFibers,
+      configuredFibers,
+      progress,
+    };
   },
 
   // ==================
@@ -524,22 +895,11 @@ window.FiberConfig = {
   // ==================
 
   setupEventListeners() {
-    // Voice control buttons
-    document.getElementById("start-voice-btn").addEventListener("click", () => {
-      this.startVoiceRecognition();
-    });
-
-    document.getElementById("stop-voice-btn").addEventListener("click", () => {
-      this.stopVoiceRecognition();
-    });
-
-    // Keyboard shortcuts
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         this.stopVoiceRecognition();
       } else if (e.key === "Space" && this.currentFiber) {
         e.preventDefault();
-        // Toggle fiber status
         const currentStatus = this.currentFiber.newStatus || "not-configured";
         const newStatus = currentStatus === "available" ? "occupied" : "available";
         this.setCurrentFiberStatus(newStatus);
@@ -554,85 +914,11 @@ window.FiberConfig = {
   // UTILITY METHODS
   // ==================
 
-  findFiberById(fiberId) {
-    const allFibers = this.getAllFibers();
-    return allFibers.find((f) => f.id === fiberId);
-  },
-
-  getAllFibers() {
-    const fibers = [];
-
-    // Collect all fibers from PBOs and PBIs
-    Object.values(this.projectData.pbos || {}).forEach((pbo) => {
-      Object.values(pbo.fibers || {}).forEach((fiber) => fibers.push(fiber));
-    });
-
-    Object.values(this.projectData.pbis || {}).forEach((pbi) => {
-      Object.values(pbi.fibers || {}).forEach((fiber) => fibers.push(fiber));
-    });
-
-    return fibers.sort((a, b) => {
-      // Sort by tiroir, then module, then fiber number
-      if (a.tiroir !== b.tiroir) return a.tiroir.localeCompare(b.tiroir);
-      if (a.module !== b.module) return a.module.localeCompare(b.module);
-      return a.fiberNumber - b.fiberNumber;
-    });
-  },
-
-  calculateProgress() {
-    const allFibers = this.getAllFibers();
-    const configuredFibers = allFibers.filter((f) => f.newStatus && f.newStatus !== "not-configured");
-    return allFibers.length > 0 ? Math.round((configuredFibers.length / allFibers.length) * 100) : 0;
-  },
-
-  calculateTiroirStats(tiroir) {
-    const fibers = [];
-
-    const pboArray = Array.from(tiroir.pbos || []);
-    const pbiArray = Array.from(tiroir.pbis || []);
-
-    [...pboArray, ...pbiArray].forEach((endpointId) => {
-      const endpoint = this.projectData.pbos[endpointId] || this.projectData.pbis[endpointId];
-      if (endpoint && endpoint.fibers) {
-        Object.values(endpoint.fibers).forEach((fiber) => fibers.push(fiber));
-      }
-    });
-
-    const configuredFibers = fibers.filter((f) => f.newStatus && f.newStatus !== "not-configured");
-    const progress = fibers.length > 0 ? Math.round((configuredFibers.length / fibers.length) * 100) : 0;
-
-    return {
-      totalFibers: fibers.length,
-      configuredFibers: configuredFibers.length,
-      progress,
-    };
-  },
-
-  updateProgress() {
-    const progress = this.calculateProgress();
-    document.getElementById("configure-progress").textContent = `${progress}%`;
-
-    const configuredCount = this.getAllFibers().filter((f) => f.newStatus && f.newStatus !== "not-configured").length;
-    document.getElementById("configure-configured-fibers").textContent = configuredCount;
-
-    // Update tiroir progress
-    Object.keys(this.projectData.tiroirs).forEach((tiroirId) => {
-      const tiroir = this.projectData.tiroirs[tiroirId];
-      const stats = this.calculateTiroirStats(tiroir);
-
-      const statElements = document.querySelectorAll(`#tiroir-${tiroirId} .tiroir-stat-number`);
-      if (statElements.length >= 2) {
-        statElements[1].textContent = stats.configuredFibers;
-        statElements[2].textContent = `${stats.progress}%`;
-      }
-    });
-  },
-
   getStatusLabel(status) {
     const labels = {
-      "not-configured": "Not Configured",
-      available: "Available",
-      occupied: "Occupied",
+      "not-configured": "A Configurer",
+      available: "Libre",
+      occupied: "Occupée",
       draft: "Draft",
       "excel-uploaded": "File Uploaded",
       "excel-processed": "Data Processed",
@@ -641,40 +927,61 @@ window.FiberConfig = {
     };
     return labels[status] || status;
   },
+  async saveTiroirConfig() {
+    try {
+      console.log("💾 Saving fiber configuration and photos...");
 
-  async showConfirmation(title, message) {
-    return new Promise((resolve) => {
-      const modalContent = `
-                <div class="confirmation-dialog">
-                    <h3>${title}</h3>
-                    <p>${message}</p>
-                    <div class="confirmation-actions">
-                        <button class="btn-secondary" id="cancel-action">Cancel</button>
-                        <button class="btn-primary" id="confirm-action">Confirm</button>
-                    </div>
-                </div>
-                <style>
-                .confirmation-dialog { text-align: center; padding: 1rem; }
-                .confirmation-dialog h3 { margin-bottom: 1rem; color: var(--text-primary); }
-                .confirmation-dialog p { margin-bottom: 2rem; color: var(--text-secondary); }
-                .confirmation-actions { display: flex; gap: 1rem; justify-content: center; }
-                </style>
-            `;
+      // Build tiroir_cfg structure
+      const tiroir_cfg = {};
 
-      window.Components.showModal(title, modalContent);
+      // Process each tiroir
+      Object.keys(this.projectData.tiroirs).forEach((tiroirId) => {
+        tiroir_cfg[tiroirId] = {
+          photos: this.getTiroirPhotos(tiroirId),
+          modules: {},
+        };
 
-      setTimeout(() => {
-        document.getElementById("cancel-action").addEventListener("click", () => {
-          window.Components.closeModal();
-          resolve(false);
+        // Process each module in tiroir
+        Object.keys(this.projectData.tiroirs[tiroirId].modules).forEach((moduleId) => {
+          tiroir_cfg[tiroirId].modules[moduleId] = {
+            fibers: {},
+          };
+
+          // Get all 24 fiber statuses
+          for (let i = 1; i <= 24; i++) {
+            const fiberId = `${tiroirId}-${moduleId}-${i}`;
+            const fiber = this.projectData.fibers[fiberId];
+            tiroir_cfg[tiroirId].modules[moduleId].fibers[i] = fiber ? fiber.newStatus : "not-configured";
+          }
         });
-        document.getElementById("confirm-action").addEventListener("click", () => {
-          window.Components.closeModal();
-          resolve(true);
-        });
-      }, 100);
-    });
+      });
+
+      // Calculate stats
+      const configuredCount = Object.values(this.projectData.fibers).filter(
+        (f) => f.newStatus !== "not-configured"
+      ).length;
+      const totalCount = this.calculateTotalFibers();
+
+      // Update project
+      await window.API.projects.update(this.currentProject.id, {
+        tiroir_cfg: tiroir_cfg,
+        configuredFibers: configuredCount,
+        totalFibers: totalCount,
+        status: configuredCount > 0 ? "in-progress" : "excel-processed",
+        updatedAt: new Date().toISOString(),
+      });
+
+      window.Components.showToast(
+        "success",
+        "Enregistré",
+        `Configuration sauvegardée: ${configuredCount} fibres configurées`
+      );
+    } catch (error) {
+      console.error("❌ Error saving progress:", error);
+      window.Components.showToast("error", "Erreur", "Échec de la sauvegarde");
+    }
   },
 };
 
+console.log("🔧 Fiber Configuration module loaded successfully");
 console.log("🔧 Fiber Configuration module loaded successfully");
